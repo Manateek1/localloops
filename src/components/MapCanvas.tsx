@@ -16,6 +16,7 @@ export function MapCanvas({ location, events, onOpenEvent }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef<Marker[]>([])
+  const searchCenterMarkerRef = useRef<Marker | null>(null)
   const onOpenRef = useRef(onOpenEvent)
 
   useEffect(() => { onOpenRef.current = onOpenEvent }, [onOpenEvent])
@@ -43,14 +44,29 @@ export function MapCanvas({ location, events, onOpenEvent }: MapCanvasProps) {
       resizeObserver.disconnect()
       markersRef.current.forEach((marker) => marker.remove())
       markersRef.current = []
+      searchCenterMarkerRef.current?.remove()
+      searchCenterMarkerRef.current = null
       map.remove()
       mapRef.current = null
     }
   }, [])
 
   useEffect(() => {
-    if (!location || !mapRef.current) return
-    mapRef.current.flyTo({ center: [location.longitude, location.latitude], zoom: location.zoom, duration: 900 })
+    const map = mapRef.current
+    if (!map) return
+    searchCenterMarkerRef.current?.remove()
+    searchCenterMarkerRef.current = null
+    if (!location) return
+
+    map.flyTo({ center: [location.longitude, location.latitude], zoom: location.zoom, duration: 900 })
+    const marker = document.createElement('div')
+    marker.className = 'greet-map-search-center'
+    marker.setAttribute('role', 'img')
+    marker.setAttribute('aria-label', `Map search center near ${location.label}`)
+    marker.title = `Map search center near ${location.label}`
+    searchCenterMarkerRef.current = new Marker({ element: marker, anchor: 'center' })
+      .setLngLat([location.longitude, location.latitude])
+      .addTo(map)
   }, [location])
 
   useEffect(() => {

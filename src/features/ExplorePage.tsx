@@ -13,6 +13,7 @@ type ExplorePageProps = {
   loading: boolean
   sources: EventFeedState
   errors: string[]
+  locationError: string
   query: string
   radius: number
   onQueryChange: (query: string) => void
@@ -27,7 +28,7 @@ type ExplorePageProps = {
 const filters = ['All events', 'Outdoors', 'Arts & culture', 'Music', 'Free', 'Community']
 
 export function ExplorePage({
-  location, events, loading, sources, errors, query, radius, onQueryChange, onSearch,
+  location, events, loading, sources, errors, locationError, query, radius, onQueryChange, onSearch,
   onRadiusChange, onOpenEvent, onCreateEvent, canCreateEvent, onSignIn,
 }: ExplorePageProps) {
   const [view, setView] = useState<'map' | 'list'>('map')
@@ -47,8 +48,11 @@ export function ExplorePage({
   async function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSearching(true)
-    await onSearch(query)
-    setSearching(false)
+    try {
+      await onSearch(query)
+    } finally {
+      setSearching(false)
+    }
   }
 
   const unavailableSources = [sources.ticketmaster === 'not_configured' ? 'Ticketmaster' : '', sources.nps === 'not_configured' ? 'National Park Service' : ''].filter(Boolean)
@@ -72,7 +76,7 @@ export function ExplorePage({
           <input id="greet-location-query" value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search any U.S. town, state, or ZIP code" required minLength={3} />
           <button type="submit" className="greet-button greet-button--primary" disabled={searching}>{searching ? 'Searching…' : <><Search size={16} />Find events</>}</button>
         </form>
-        <div className="greet-search-help"><span>Try “Asheville, NC” or a ZIP code.</span><label>Search radius <select value={radius} onChange={(event) => onRadiusChange(Number(event.target.value))}><option value={25}>25 miles</option><option value={50}>50 miles</option><option value={100}>100 miles</option><option value={250}>250 miles</option></select></label></div>
+        <div className="greet-search-help"><span className={locationError ? 'greet-search-status is-error' : 'greet-search-status'} role={locationError ? 'alert' : 'status'}>{locationError || (searching ? 'Finding this place and centering the map…' : location ? 'Map centered near ' + location.label + '.' : 'Try “Asheville, NC” or a ZIP code.')}</span><label>Search radius <select value={radius} onChange={(event) => onRadiusChange(Number(event.target.value))}><option value={25}>25 miles</option><option value={50}>50 miles</option><option value={100}>100 miles</option><option value={250}>250 miles</option></select></label></div>
       </section>
 
       <section className="greet-explore-panel" aria-label="Explore real local events">
