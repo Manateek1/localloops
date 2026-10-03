@@ -1,4 +1,4 @@
-# Contributing to Greet Meet
+# Contributing to LocalLoops
 
 You do not need to know how to code to suggest an improvement. The team uses a simple path so changes can be tried and reviewed before they reach `main`:
 
@@ -6,7 +6,7 @@ You do not need to know how to code to suggest an improvement. The team uses a s
 
 ## Request a feature
 
-1. Open the Greet Meet repository on GitHub and select **Issues → New issue → Feature request**.
+1. Open the LocalLoops repository on GitHub and select **Issues → New issue → Feature request**.
 2. Describe the problem in everyday language. Say who it affects, what a better result would look like, and give one or two examples of how you would use it. Add a screenshot if one helps.
 3. Submit the issue. A teammate can clarify the request before implementation starts.
 
@@ -24,9 +24,9 @@ AI agents do not approve their own pull requests or merge them. A green check me
 
 ## Find a preview and checks
 
-Open the pull request on GitHub. Its **Conversation** tab has the summary and any preview link. Select **Checks** (or the checks section near the bottom of the conversation) to see automated results. If a preview link is shown, open it to try the change. If a check is red, read its message and ask the contributor to fix or explain it.
+Open the pull request on GitHub. Its **Conversation** tab has the summary and the Vercel preview link. Select **Checks** (or the checks section near the bottom of the conversation) to see the deployment status. Open the preview to try the change. If a check is red, read its message and ask the contributor to fix or explain it.
 
-This repository does not currently have an automatic preview deployment or GitHub Actions checks configured. Until the team sets those up, there may be no preview link and the Checks tab may be empty. The contributor should include screenshots for UI changes and list the local command they ran. The app can be run locally with `npm install` and `npm run dev`; the terminal prints a local address, usually `http://localhost:5173`.
+Vercel creates a preview deployment for pull request branches. The contributor should include screenshots for UI changes and list the local command they ran. The app can also be run locally with `npm install` and `npm run dev`; the terminal prints a local address, usually `http://localhost:5173`.
 
 ## Protect `main`
 

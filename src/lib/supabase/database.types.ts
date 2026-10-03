@@ -11,6 +11,8 @@ export type ProfileRow = {
   avatar_url: string | null
   bio: string | null
   home_region: string | null
+  state_code: string | null
+  interests: string[]
   discoverable: boolean
   created_at: string
 }
@@ -24,8 +26,12 @@ export type EventRow = {
   ends_at: string | null
   mode: 'city' | 'rural'
   visibility: 'public'
+  category: string
   region_label: string
   venue_label: string
+  state_code: string
+  latitude: number
+  longitude: number
   source_name: string | null
   source_url: string | null
   created_at: string
@@ -33,6 +39,14 @@ export type EventRow = {
 
 export type EventRsvpRow = {
   event_id: string
+  user_id: string
+  status: 'going' | 'interested'
+  created_at: string
+}
+
+export type ExternalEventRsvpRow = {
+  event_source: 'ticketmaster' | 'nps'
+  source_event_id: string
   user_id: string
   status: 'going' | 'interested'
   created_at: string
@@ -65,6 +79,17 @@ export type RidePostRow = {
   created_at: string
 }
 
+export type ExternalRidePostRow = {
+  id: string
+  event_source: 'ticketmaster' | 'nps'
+  source_event_id: string
+  user_id: string
+  kind: 'request' | 'offer'
+  pickup_area: string
+  seats_available: number | null
+  created_at: string
+}
+
 export type NotificationRow = {
   id: string
   recipient_id: string
@@ -81,9 +106,11 @@ export type Database = {
       profiles: TableShape<ProfileRow>
       events: TableShape<EventRow>
       event_rsvps: TableShape<EventRsvpRow>
+      external_event_rsvps: TableShape<ExternalEventRsvpRow>
       friendships: TableShape<FriendshipRow>
       messages: TableShape<MessageRow>
       ride_posts: TableShape<RidePostRow>
+      external_ride_posts: TableShape<ExternalRidePostRow>
       notifications: TableShape<NotificationRow>
     }
     Views: Record<never, never>

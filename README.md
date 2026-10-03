@@ -1,30 +1,72 @@
-# Greet Meet
+# LocalLoops
 
-Created for Dublin Hacx, Greet Meet explores how shared interests can lead to local events, new connections, and active plans. This mobile-first prototype includes an urban city experience and a rural mode connecting nearby towns, local calendars, libraries, Parks & Rec, and public-event ride coordination.
+LocalLoops helps people find public events and neighbors in their area, including rural communities where nearby plans may be spread across several towns. The app searches real listings from Ticketmaster and the National Park Service, shows public gatherings created by LocalLoops members, and never fills gaps with sample people or invented events.
 
-For the team's plain-language feature request and review process, see [CONTRIBUTING.md](CONTRIBUTING.md).
+Location search accepts a U.S. ZIP code or a town and state, and uses an approximate postal-place center. The map uses OpenFreeMap tiles based on OpenStreetMap data. Search works in all 50 states; listing coverage depends on the event providers and gatherings members publish.
 
-## Run the prototype
+## Run locally
+
+Use a Node.js version supported by Vite 8, then install dependencies and create a local environment file:
 
 ```sh
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
-The demo uses fictional San Francisco/Oakland and Foothill communities data. Search, filters, map/list view, mode switching, RSVPs, ride interest/offers, friend requests, accepted-friend DMs, notifications, and the community guide all run in local React state. Refreshing resets the sample interactions.
+The Vite development server also runs the `/api/geocode` and `/api/events` handlers locally. ZIP and town search works without an API key. Without event-provider keys, LocalLoops shows a clear empty state and does not invent listings. Sign-in, member profiles, community gatherings, RSVPs, ride coordination, connection requests, and messages need a separately configured LocalLoops Supabase project.
 
-The guide is a local simulation. Its original helper-robot/dumpling character is a static image, and its voice control simulates listening without requesting microphone access. No external AI, live event search, push notification, or authentication service is connected.
+## Configure Supabase
 
-## Supabase foundation
+Create a new project for LocalLoops. Do not point this app at a database used by another product. Copy its project URL and publishable key into `.env.local`:
 
-The repo contains a Supabase CLI config, an initial migration, typed `supabase-js` client scaffolding, and `.env.example`. The browser demo does not need project credentials. To prepare a local environment later, copy `.env.example` to `.env.local` and fill in a project URL and publishable key. Never put a secret/service-role key in a browser environment variable.
+```dotenv
+VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+```
 
-The migration adds profiles, public events, RSVPs, friendships, messages, ride posts, and notifications. RLS is enabled on every table. Anonymous access is not granted; authenticated access is limited by ownership, public-event context, or friendship participation. Message policies require an accepted friendship. Profile and ride-location fields store only broad region or pickup-area labels, not home addresses or precise member coordinates. The local Supabase config sets `auto_expose_new_tables = false`.
+Apply the checked-in migration using the Supabase CLI:
 
-No Supabase project was linked and no migration was applied remotely. Authentication, hosted project connection, event search, AI, push notifications, and the app's data mutations remain for the team to iterate on. Add any future Data API grant together with its matching RLS policies after the team settles the product access model.
+```sh
+supabase login
+supabase link --project-ref YOUR_PROJECT_REF
+supabase db push
+```
 
-## Design references
+The migration enables row-level security on every app table. Profiles are visible only to authenticated members who opted into discovery; direct messages require an accepted connection. Members can optionally add a broad town or region and state to be discoverable in that state. LocalLoops stores public pickup-area labels, not home addresses or live member coordinates. Configure the Supabase Auth site URL and allowed redirect URLs for local development and each deployed app origin.
 
-- Approved concept: [`design/greet-meet-approved-board.png`](design/greet-meet-approved-board.png)
-- Design tokens and responsive structure: [`design/design-system.md`](design/design-system.md)
-- Community guide character: [`public/images/leaf-guide.png`](public/images/leaf-guide.png)
+## Connect real event sources
+
+Create API keys in the providers' developer portals and add them only as server environment variables:
+
+```dotenv
+TICKETMASTER_API_KEY=...
+NPS_API_KEY=...
+```
+
+- [Ticketmaster Discovery API](https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/) returns organizer listings around the searched coordinates.
+- [National Park Service API](https://www.nps.gov/subjects/developer/api-documentation.htm) contributes dated NPS events with published coordinates.
+
+In Vercel, set these as server-side environment variables. Never prefix them with `VITE_`; the browser calls the `/api/events` function and does not receive either key. The map and place search need no key. Each event card names its source and links back to the original listing. Provider coverage is not a complete catalog of every county fair, library program, or small-town event, so LocalLoops also lets signed-in members publish real public gatherings.
+
+## Connect the voice guide
+
+Create or choose an ElevenLabs Conversational AI agent, then set its ID as `ELEVENLABS_AGENT_ID` and a server-side API key as `ELEVENLABS_API_KEY`. Keep the key out of every `VITE_` variable. The `POST /api/voice-token` endpoint checks the caller's Supabase session before asking ElevenLabs for a short-lived WebRTC conversation token; the browser never receives the API key. The endpoint also needs the Supabase URL and publishable key set for the app.
+
+The guide starts only after a signed-in member taps **Talk with your guide**. The browser then requests microphone permission and the SDK connects the live session. Use the deployed HTTPS URL or `localhost`; if the mic is blocked, allow it in the browser's site settings. The guide shows a setup message until the ElevenLabs key and agent ID have been added to the Vercel project and the deployment rebuilt.
+
+The site language picker is shared with the voice guide. The guide receives the selected language when a new chat starts. Enable the **Language** override in the agent's Security settings, add the desired languages to the agent, and use its multilingual model. Changing the site language during a chat takes effect on the next chat. ElevenLabs supports fewer languages than Google Translation, so languages outside the voice SDK's supported set use the agent's configured language.
+
+## Translate the site
+
+LocalLoops defaults to English. The header language picker translates public interface and event text with Google Cloud Translation. Private profile fields, member names, pickup-area notes, and direct messages are excluded. The full Google language list appears when the translation API is configured; a common-language list remains available before then.
+
+Create a Google Cloud API key, enable Cloud Translation API, and set `GOOGLE_TRANSLATE_API_KEY` as a server-only environment variable in `.env.local` or Vercel. Restrict the key to Cloud Translation API and set an API quota before deploying. A billing-enabled project is required. Google's current pricing applies a monthly $10 credit to the first 500,000 text characters, then charges $20 per million characters for Cloud Translation Basic. See [Google Cloud setup](https://docs.cloud.google.com/translate/docs/setup) and [current pricing](https://cloud.google.com/products/translate/pricing). Without the key, the picker stays available, but the page remains in English with a setup notice.
+
+## Deploy to Vercel
+
+Import this repository into Vercel with the Vite framework preset. Add the Supabase URL and publishable key as `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, then add the event-provider keys above as server-only variables. Apply the Supabase migration and set Auth redirect URLs before inviting members. Vercel builds the Vite app and deploys the `api/` handlers as serverless functions.
+
+## Scope
+
+LocalLoops has email/password sign-in, profiles, opt-in member discovery, connection requests, accepted-connection messages, public community events, event RSVPs, and public-place ride coordination. The large sprout character is the friendly product guide. The homepage sample conversation is an illustrative preview, not a live AI exchange. The voice interface is wired to ElevenLabs but needs an agent ID and server API key in deployment settings before a live conversation can start; Gemma and AI answers grounded in live LocalLoops data are not connected.

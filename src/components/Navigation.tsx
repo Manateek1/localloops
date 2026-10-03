@@ -1,73 +1,66 @@
-import { Bell, Compass, MessageCircle, Sparkles, Users } from 'lucide-react'
-import type { Page } from '../data/demo'
+import { Compass, MessageCircle, UserRound, Users } from 'lucide-react'
 import { Brand } from './Brand'
+import { LanguagePicker } from '../features/LanguageProvider'
+
+export type Page = 'explore' | 'community' | 'inbox' | 'account' | 'event' | 'messages'
 
 type NavigationProps = {
   page: Page
-  unreadCount: number
+  userName: string | null
   onNavigate: (page: Page) => void
-  onNotifications: () => void
+  onSignIn: () => void
+  onSignOut: () => void
 }
 
 const items = [
   { page: 'explore' as const, label: 'Explore', Icon: Compass },
-  { page: 'people' as const, label: 'People', Icon: Users },
+  { page: 'community' as const, label: 'Community', Icon: Users },
   { page: 'inbox' as const, label: 'Inbox', Icon: MessageCircle },
-  { page: 'ai' as const, label: 'Guide', Icon: Sparkles },
 ]
 
-export function Header({ page, unreadCount, onNavigate, onNotifications }: NavigationProps) {
-  const activePage = page === 'event' ? 'explore' : page === 'messages' ? 'inbox' : page
+function activeFor(page: Page): Page {
+  if (page === 'event') return 'explore'
+  if (page === 'messages') return 'inbox'
+  return page
+}
 
+export function Header({ page, userName, onNavigate, onSignIn, onSignOut }: NavigationProps) {
+  const activePage = activeFor(page)
   return (
-    <header className="topbar">
-      <button className="brand-button" type="button" onClick={() => onNavigate('explore')} aria-label="Greet Meet home">
-        <Brand />
-      </button>
-      <nav className="desktop-nav" aria-label="Main navigation">
+    <header className="greet-header">
+      <button className="greet-header__brand" type="button" onClick={() => onNavigate('explore')} aria-label="LocalLoops home"><Brand /></button>
+      <nav className="greet-nav" aria-label="Main navigation">
         {items.map(({ page: itemPage, label, Icon }) => (
-          <button
-            className={`desktop-nav__item ${activePage === itemPage ? 'is-active' : ''}`}
-            key={itemPage}
-            type="button"
-            onClick={() => onNavigate(itemPage)}
-          >
-            <Icon size={17} strokeWidth={1.8} />
-            {label}
+          <button className={`greet-nav__item ${activePage === itemPage ? 'is-active' : ''}`} key={itemPage} type="button" onClick={() => onNavigate(itemPage)}>
+            <Icon size={17} strokeWidth={1.8} />{label}
           </button>
         ))}
       </nav>
-      <div className="topbar__actions">
-        <span className="topbar__location"><span className="location-dot" /> Nearby, at your pace</span>
-        <button className="icon-button notification-button" type="button" onClick={onNotifications} aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}>
-          <Bell size={19} strokeWidth={1.8} />
-          {unreadCount > 0 && <span className="notification-dot" />}
-        </button>
+      <div className="greet-header__actions">
+        <LanguagePicker />
+        {userName ? (
+          <>
+            <button className={`greet-account-link ${activePage === 'account' ? 'is-active' : ''}`} type="button" onClick={() => onNavigate('account')}><UserRound size={16} /><span translate="no">{userName}</span></button>
+            <button className="greet-signout" type="button" onClick={onSignOut}>Sign out</button>
+          </>
+        ) : <button className="greet-signin" type="button" onClick={onSignIn}>Sign in</button>}
       </div>
     </header>
   )
 }
 
-export function BottomNav({ page, onNavigate, unreadCount }: Pick<NavigationProps, 'page' | 'onNavigate' | 'unreadCount'>) {
-  const activePage = page === 'event' ? 'explore' : page === 'messages' ? 'inbox' : page
-
+export function BottomNav({ page, userName, onNavigate, onSignIn }: Pick<NavigationProps, 'page' | 'userName' | 'onNavigate' | 'onSignIn'>) {
+  const activePage = activeFor(page)
   return (
-    <nav className="bottom-nav" aria-label="Main navigation">
+    <nav className="greet-bottom-nav" aria-label="Main navigation">
       {items.map(({ page: itemPage, label, Icon }) => (
-        <button
-          className={`bottom-nav__item ${activePage === itemPage ? 'is-active' : ''}`}
-          key={itemPage}
-          type="button"
-          onClick={() => onNavigate(itemPage)}
-          aria-current={activePage === itemPage ? 'page' : undefined}
-        >
-          <span className="bottom-nav__icon-wrap">
-            <Icon size={20} strokeWidth={1.9} />
-            {itemPage === 'inbox' && unreadCount > 0 && <span className="nav-badge">{unreadCount}</span>}
-          </span>
-          <span>{label}</span>
+        <button className={`greet-bottom-nav__item ${activePage === itemPage ? 'is-active' : ''}`} key={itemPage} type="button" onClick={() => onNavigate(itemPage)} aria-current={activePage === itemPage ? 'page' : undefined}>
+          <Icon size={20} strokeWidth={1.9} /><span>{label}</span>
         </button>
       ))}
+      {userName
+        ? <button className={`greet-bottom-nav__item ${activePage === 'account' ? 'is-active' : ''}`} type="button" onClick={() => onNavigate('account')}><UserRound size={20} /><span>Profile</span></button>
+        : <button className="greet-bottom-nav__item" type="button" onClick={onSignIn}><UserRound size={20} /><span>Sign in</span></button>}
     </nav>
   )
 }
