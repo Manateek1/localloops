@@ -9,11 +9,12 @@ type CreateEventModalProps = {
   userId: string
   profile: Profile | null
   location: LocationResult | null
+  communityId?: string | null
   onClose: () => void
   onCreated: (event: CommunityEvent) => void
 }
 
-export function CreateEventModal({ client, userId, profile, location, onClose, onCreated }: CreateEventModalProps) {
+export function CreateEventModal({ client, userId, profile, location, communityId = null, onClose, onCreated }: CreateEventModalProps) {
   const [title, setTitle] = useState('')
   const [venue, setVenue] = useState('')
   const [dateTime, setDateTime] = useState('')
@@ -50,6 +51,7 @@ export function CreateEventModal({ client, userId, profile, location, onClose, o
       category: 'Community',
       source_name: 'LocalLoops community',
       source_url: null,
+      community_id: communityId,
     }).select('*').single()
     setBusy(false)
     if (insertError || !data) {

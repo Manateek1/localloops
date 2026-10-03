@@ -196,6 +196,55 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-empty-card p { max-width: 430px; margin: 0 0 3px; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .greet-community-search { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 14px; margin: 0 0 17px; border: 1px solid #dce3d9; border-radius: 13px; color: var(--forest); background: var(--surface); }
 .greet-community-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 12px; }
+.greet-community-tabs, .greet-community-subtabs { display: flex; align-items: center; gap: 8px; }
+.greet-community-tabs { margin: -4px 0 23px; padding-bottom: 10px; border-bottom: 1px solid #e7e4da; }
+.greet-community-tabs button, .greet-community-subtabs button { min-height: 39px; display: inline-flex; align-items: center; gap: 7px; padding: 0 13px; border: 1px solid transparent; border-radius: 11px; color: #657269; background: transparent; font-size: 12px; font-weight: 650; cursor: pointer; }
+.greet-community-tabs button.is-active, .greet-community-subtabs button.is-active { border-color: #dce5d8; color: var(--forest); background: #e9eee5; font-weight: 750; }
+.greet-community-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin: 0 0 16px; }
+.greet-community-subtabs button span { min-width: 20px; height: 20px; display: inline-grid; place-items: center; padding: 0 5px; border-radius: 999px; color: #526452; background: #fffefa; font-size: 9px; }
+.greet-community-create, .greet-community-detail { margin: 0 0 19px; padding: 22px; border: 1px solid #dfe5dc; border-radius: 19px; background: var(--surface); box-shadow: 0 8px 25px rgba(39,55,43,.035); }
+.greet-community-create__heading, .greet-community-events-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.greet-community-create__heading h2, .greet-community-detail h2 { margin: 0; color: #26382d; font-size: 23px; }
+.greet-community-create__heading > span { flex: 0 0 auto; padding: 7px 10px; border-radius: 999px; color: #4d634f; background: #edf2e9; font-size: 10px; font-weight: 750; }
+.greet-community-create > p { max-width: 720px; margin: 10px 0 17px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.greet-form-hint { margin: 0; color: #748077; font-size: 10px; }
+.greet-field-optional { color: #7c867e; font-size: 10px; font-weight: 500; }
+.greet-community-create__actions { display: flex; justify-content: flex-end; gap: 8px; }
+.greet-community-list { overflow: hidden; border: 1px solid var(--border); border-radius: 19px; background: var(--surface); }
+.greet-community-card { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 18px; padding: 16px 18px; border-bottom: 1px solid #eeece4; }
+.greet-community-card:last-child { border-bottom: 0; }
+.greet-community-card__main { min-width: 0; display: flex; align-items: center; gap: 14px; padding: 0; border: 0; background: transparent; text-align: left; cursor: pointer; }
+.greet-community-card__icon { width: 48px; height: 48px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 15px; color: var(--forest); background: #e8efe5; }
+.greet-community-card__body { min-width: 0; display: grid; gap: 4px; }
+.greet-community-card__body > strong { color: #27392e; font-size: 14px; }
+.greet-community-card__body > small { overflow: hidden; max-width: 760px; color: #6f7972; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.greet-community-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 13px; color: #788178; font-size: 9px; }
+.greet-community-card__meta span { display: inline-flex; align-items: center; gap: 4px; }
+.greet-community-card__actions { display: flex; align-items: center; gap: 8px; }
+.greet-community-card__actions .greet-button { min-height: 34px; }
+.greet-community-joined, .greet-community-owner { display: inline-flex; align-items: center; gap: 5px; color: #486447; font-size: 10px; font-weight: 750; white-space: nowrap; }
+.greet-community-owner { padding: 6px 9px; border-radius: 999px; background: #edf2e9; }
+.greet-community-back { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 15px; padding: 5px 0; border: 0; color: #58705d; background: transparent; font-size: 11px; font-weight: 700; cursor: pointer; }
+.greet-community-detail__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; padding-bottom: 21px; border-bottom: 1px solid #eeece4; }
+.greet-community-detail__description { max-width: 720px; margin: 8px 0 11px; color: #69756d; font-size: 12px; line-height: 1.55; white-space: pre-wrap; }
+.greet-community-meta { display: flex; flex-wrap: wrap; gap: 8px 14px; color: #778179; font-size: 10px; }
+.greet-community-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.greet-community-detail__actions { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 10px; }
+.greet-community-note { margin: 14px 0 0; padding: 10px 12px; border-radius: 10px; color: #596f51; background: #f0f3e9; font-size: 10px; line-height: 1.5; }
+.greet-community-events-heading { margin: 20px 0 12px; }
+.greet-community-events-heading .greet-eyebrow { margin-bottom: 5px; }
+.greet-community-events-heading h3 { margin: 0; color: #26382d; font-size: 18px; }
+.greet-community-event-list { overflow: hidden; border: 1px solid #eeece4; border-radius: 14px; }
+.greet-community-event { width: 100%; display: flex; align-items: center; gap: 12px; padding: 13px; border: 0; border-bottom: 1px solid #eeece4; background: #fffefa; text-align: left; cursor: pointer; }
+.greet-community-event:last-child { border-bottom: 0; }
+.greet-community-event:hover { background: #f7f8f3; }
+.greet-community-event__icon { width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 12px; color: #45694f; background: #eaf0e6; }
+.greet-community-event__body { min-width: 0; flex: 1; display: grid; gap: 4px; }
+.greet-community-event__body strong { overflow: hidden; color: #27392e; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.greet-community-event__body small { overflow: hidden; color: #747e76; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.greet-community-event__arrow { color: #61795f; font-size: 10px; font-weight: 700; }
+.greet-people-heading { margin-top: 23px; }
+.greet-people-heading h2 { margin: 0 0 8px; color: #27392e; font-size: clamp(23px, 2.5vw, 32px); }
 .greet-member-list { overflow: hidden; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); }
 .greet-member-card { display: grid; grid-template-columns: 53px minmax(0,1fr) auto; align-items: center; gap: 14px; padding: 16px 18px; border-bottom: 1px solid #eeece4; }
 .greet-member-card:last-child { border-bottom: 0; }
@@ -420,6 +469,34 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
   .greet-page-heading { margin-bottom: 18px; }
   .greet-page-heading > p:last-child { font-size: 11px; }
   .greet-community-search { height: 43px; margin-bottom: 11px; }
+  .greet-community-tabs { gap: 3px; margin-bottom: 17px; }
+  .greet-community-tabs button, .greet-community-subtabs button { min-height: 36px; padding: 0 9px; font-size: 10px; }
+  .greet-community-toolbar { align-items: stretch; flex-direction: column; gap: 9px; margin-bottom: 11px; }
+  .greet-community-toolbar > .greet-button { justify-content: center; }
+  .greet-community-create, .greet-community-detail { padding: 15px 12px; border-radius: 15px; }
+  .greet-community-create__heading h2, .greet-community-detail h2 { font-size: 19px; }
+  .greet-community-create__heading > span { padding: 6px 8px; font-size: 8px; }
+  .greet-community-create > p { margin: 8px 0 13px; font-size: 10px; }
+  .greet-community-card { grid-template-columns: minmax(0,1fr); gap: 9px; padding: 12px 11px; }
+  .greet-community-card__main { align-items: flex-start; gap: 9px; }
+  .greet-community-card__icon { width: 40px; height: 40px; border-radius: 12px; }
+  .greet-community-card__body > strong { font-size: 12px; }
+  .greet-community-card__body > small { display: -webkit-box; max-width: 100%; white-space: normal; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .greet-community-card__meta { font-size: 8px; }
+  .greet-community-card__actions { padding-left: 49px; }
+  .greet-community-card__actions .greet-button { min-height: 30px; font-size: 9px; }
+  .greet-community-detail__header { flex-direction: column; gap: 12px; padding-bottom: 14px; }
+  .greet-community-detail__header > .greet-button { align-self: flex-start; }
+  .greet-community-detail__actions { align-items: flex-start; }
+  .greet-community-detail__description { font-size: 10px; }
+  .greet-community-meta { font-size: 9px; }
+  .greet-community-events-heading { align-items: flex-start; flex-direction: column; gap: 9px; margin-top: 16px; }
+  .greet-community-events-heading h3 { font-size: 15px; }
+  .greet-community-event { gap: 8px; padding: 10px; }
+  .greet-community-event__icon { width: 33px; height: 33px; }
+  .greet-community-event__body strong { font-size: 10px; }
+  .greet-community-event__body small { font-size: 8px; }
+  .greet-community-event__arrow { font-size: 8px; }
   .greet-member-list { border-radius: 16px; }
   .greet-member-card { grid-template-columns: 43px minmax(0,1fr); gap: 9px; padding: 12px 11px; }
   .greet-member-avatar { width: 42px; height: 42px; font-size: 12px; }

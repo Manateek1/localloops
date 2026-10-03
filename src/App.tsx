@@ -26,6 +26,7 @@ function App() {
   const [profileRefresh, setProfileRefresh] = useState(0)
   const [authOpen, setAuthOpen] = useState(false)
   const [eventComposerOpen, setEventComposerOpen] = useState(false)
+  const [eventCommunityId, setEventCommunityId] = useState<string | null>(null)
   const [location, setLocation] = useState<LocationResult | null>(null)
   const [locationQuery, setLocationQuery] = useState('')
   const [radius, setRadius] = useState(100)
@@ -363,7 +364,7 @@ function App() {
     await loadEventSocial()
   }
 
-  const openEventComposer = () => {
+  const openEventComposer = (communityId: string | null = null) => {
     if (!user || !supabaseClient) {
       openSignIn()
       return
@@ -372,6 +373,7 @@ function App() {
       notify('Choose a town or ZIP code before hosting a gathering.')
       return
     }
+    setEventCommunityId(communityId)
     setEventComposerOpen(true)
   }
 
@@ -442,14 +444,18 @@ function App() {
           onSignIn={openSignIn}
         />}
         {page === 'community' && <CommunityPage
+          client={supabaseClient}
           profiles={discoverableProfiles}
           friendships={friendships}
           userId={user?.id ?? null}
           stateCode={location?.stateCode ?? null}
           loading={socialLoading}
+          profile={profile}
           onRequest={(profileId) => void sendConnectionRequest(profileId)}
           onAccept={(friendshipId) => void acceptConnectionRequest(friendshipId)}
           onMessage={openThread}
+          onCreateEvent={(communityId) => openEventComposer(communityId)}
+          onOpenEvent={openEvent}
           onSignIn={openSignIn}
         />}
         {page === 'inbox' && <InboxPage
@@ -481,7 +487,7 @@ function App() {
       {!isMessagePage && <BottomNav page={page} userName={userName} onNavigate={navigate} onSignIn={openSignIn} />}
       {toast && <div className="greet-toast" role="status">{toast}</div>}
       {authOpen && <AuthModal client={supabaseClient} onClose={() => setAuthOpen(false)} />}
-      {eventComposerOpen && eventModalClient && user && <CreateEventModal client={eventModalClient} userId={user.id} profile={profile} location={location} onClose={() => setEventComposerOpen(false)} onCreated={onEventCreated} />}
+      {eventComposerOpen && eventModalClient && user && <CreateEventModal client={eventModalClient} userId={user.id} profile={profile} location={location} communityId={eventCommunityId} onClose={() => setEventComposerOpen(false)} onCreated={onEventCreated} />}
     </div>
   )
 }
