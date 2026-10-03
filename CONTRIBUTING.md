@@ -24,9 +24,9 @@ AI agents do not approve their own pull requests or merge them. A green check me
 
 ## Find a preview and checks
 
-Open the pull request on GitHub. Its **Conversation** tab has the summary and any preview link. Select **Checks** (or the checks section near the bottom of the conversation) to see automated results. If a preview link is shown, open it to try the change. If a check is red, read its message and ask the contributor to fix or explain it.
+Open the pull request on GitHub. Its **Conversation** tab has the summary and the Vercel preview link. Select **Checks** (or the checks section near the bottom of the conversation) to see the deployment status. Open the preview to try the change. If a check is red, read its message and ask the contributor to fix or explain it.
 
-This repository does not currently have an automatic preview deployment or GitHub Actions checks configured. Until the team sets those up, there may be no preview link and the Checks tab may be empty. The contributor should include screenshots for UI changes and list the local command they ran. The app can be run locally with `npm install` and `npm run dev`; the terminal prints a local address, usually `http://localhost:5173`.
+Vercel creates a preview deployment for pull request branches. The contributor should include screenshots for UI changes and list the local command they ran. The app can also be run locally with `npm install` and `npm run dev`; the terminal prints a local address, usually `http://localhost:5173`.
 
 ## Protect `main`
 
