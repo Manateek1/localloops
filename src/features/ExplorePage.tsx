@@ -1,7 +1,9 @@
 import { Suspense, lazy, useMemo, useState, type FormEvent } from 'react'
 import { CalendarDays, Compass, List, Map, MapPin, MessageCircle, Plus, Search, Trees } from 'lucide-react'
 import type { CommunityEvent, LocationResult } from '../data/models'
+import { EVENT_SEARCH_RADIUS_MILES } from '../data/constants'
 import type { EventFeedState } from '../lib/events'
+import { sortNearby } from '../lib/events'
 import { EventCard } from '../components/EventCard'
 import { VoiceGuide } from './VoiceGuide'
 
@@ -14,10 +16,9 @@ type ExplorePageProps = {
   sources: EventFeedState
   errors: string[]
   query: string
-  radius: number
+  interests: string[]
   onQueryChange: (query: string) => void
   onSearch: (query: string) => Promise<void>
-  onRadiusChange: (radius: number) => void
   onOpenEvent: (event: CommunityEvent) => void
   onCreateEvent: () => void
   canCreateEvent: boolean
@@ -27,13 +28,14 @@ type ExplorePageProps = {
 const filters = ['All events', 'Outdoors', 'Arts & culture', 'Music', 'Free', 'Community']
 
 export function ExplorePage({
-  location, events, loading, sources, errors, query, radius, onQueryChange, onSearch,
-  onRadiusChange, onOpenEvent, onCreateEvent, canCreateEvent, onSignIn,
+  location, events, loading, sources, errors, query, interests, onQueryChange, onSearch,
+  onOpenEvent, onCreateEvent, canCreateEvent, onSignIn,
 }: ExplorePageProps) {
   const [view, setView] = useState<'map' | 'list'>('map')
   const [filter, setFilter] = useState('All events')
   const [searching, setSearching] = useState(false)
-  const filteredEvents = useMemo(() => events.filter((event) => {
+  const recommendedEvents = useMemo(() => sortNearby(events, interests), [events, interests])
+  const filteredEvents = useMemo(() => recommendedEvents.filter((event) => {
     if (filter === 'All events') return true
     if (filter === 'Free') return event.isFree === true
     if (filter === 'Community') return event.source === 'community'
@@ -42,7 +44,7 @@ export function ExplorePage({
     if (filter === 'Arts & culture') return /art|culture|museum|theatre|theater|exhibit/.test(category)
     if (filter === 'Music') return /music|concert|band|song/.test(category)
     return true
-  }), [events, filter])
+  }), [recommendedEvents, filter])
 
   async function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -59,7 +61,7 @@ export function ExplorePage({
         <div className="greet-home-hero__copy">
           <p className="greet-eyebrow">{location ? 'Good things are happening nearby' : 'A wider circle, close to home'}</p>
           <h1>{location ? 'Real plans around ' + location.label + '.' : 'Find a good plan, wherever home is.'}</h1>
-          <p className="greet-home-hero__intro">Discover real public events and local gatherings across all 50 states.</p>
+          <p className="greet-home-hero__intro">Search any town or ZIP to find public events and local gatherings within 30 miles.</p>
           <button className="greet-button greet-button--primary" type="button" onClick={canCreateEvent ? onCreateEvent : onSignIn}><Plus size={17} />Host a gathering</button>
         </div>
         <GuideChatPreview />
@@ -72,12 +74,12 @@ export function ExplorePage({
           <input id="greet-location-query" value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search any U.S. town, state, or ZIP code" required minLength={3} />
           <button type="submit" className="greet-button greet-button--primary" disabled={searching}>{searching ? 'Searching…' : <><Search size={16} />Find events</>}</button>
         </form>
-        <div className="greet-search-help"><span>Try “Asheville, NC” or a ZIP code.</span><label>Search radius <select value={radius} onChange={(event) => onRadiusChange(Number(event.target.value))}><option value={25}>25 miles</option><option value={50}>50 miles</option><option value={100}>100 miles</option><option value={250}>250 miles</option></select></label></div>
+        <div className="greet-search-help"><span>Try “Asheville, NC” or a ZIP code.</span><strong className="greet-radius-note"><MapPin size={13} />{EVENT_SEARCH_RADIUS_MILES}-mile radius</strong></div>
       </section>
 
       <section className="greet-explore-panel" aria-label="Explore real local events">
         <div className="greet-explore-toolbar">
-          <div className="greet-area-label"><span className="greet-area-label__icon"><Compass size={19} /></span><span><strong>{location ? location.label : 'Across the United States'}</strong><small>{location ? 'Approximate town or ZIP area' : 'Choose any location to see what’s nearby'}</small></span></div>
+          <div className="greet-area-label"><span className="greet-area-label__icon"><Compass size={19} /></span><span><strong>{location ? location.label : 'Choose a location'}</strong><small>{location ? 'Approximate town or ZIP center' : 'Search any U.S. community to see what’s nearby'}</small></span></div>
           <div className="greet-toolbar-actions">
             <div className="greet-view-switch" role="group" aria-label="Map or list view">
               <button type="button" className={view === 'map' ? 'is-active' : ''} onClick={() => setView('map')} aria-pressed={view === 'map'}><Map size={15} />Map</button>
@@ -94,7 +96,7 @@ export function ExplorePage({
         {view === 'map' ? (
           <div className="greet-explore-grid">
             <div className="greet-map-column">
-              <Suspense fallback={<div className="greet-map greet-map--loading" role="status">Loading the live map…</div>}><MapCanvas location={location} events={filteredEvents} onOpenEvent={(id) => { const event = filteredEvents.find((item) => item.id === id); if (event) onOpenEvent(event) }} /></Suspense>
+              <Suspense fallback={<div className="greet-map greet-map--loading" role="status">Loading the live map…</div>}><MapCanvas location={location} events={filteredEvents} showSearchRadius onOpenEvent={(id) => { const event = filteredEvents.find((item) => item.id === id); if (event) onOpenEvent(event) }} /></Suspense>
               <div className="greet-source-strip">
                 <span className="greet-source-strip__label">Live sources</span>
                 {sources.ticketmaster === 'ready' && <span><CalendarDays size={14} />Ticketmaster</span>}
@@ -103,7 +105,7 @@ export function ExplorePage({
               </div>
             </div>
             <div className="greet-event-list-column">
-              <div className="greet-list-heading"><div><h2>Coming up</h2><p>{location ? 'Listings returned for your search area' : 'Plans from towns large and small'}</p></div><button type="button" className="greet-text-button" onClick={() => setView('list')}>See all</button></div>
+              <div className="greet-list-heading"><div><h2>{interests.length ? 'Recommended for you' : 'Coming up'}</h2><p>{location ? `Within ${EVENT_SEARCH_RADIUS_MILES} miles of ${location.label}` : 'Choose a town or ZIP to see nearby plans'}</p></div><button type="button" className="greet-text-button" onClick={() => setView('list')}>See all</button></div>
               {loading ? <div className="greet-loading" role="status">Checking real event listings…</div> : filteredEvents.length ? <div className="greet-event-list">{filteredEvents.slice(0, 5).map((event) => <EventCard key={event.id} event={event} onOpen={() => onOpenEvent(event)} compact />)}</div> : <EmptyEvents hasLocation={Boolean(location)} unavailableSources={unavailableSources} errors={errors} />}
             </div>
           </div>
@@ -149,8 +151,8 @@ function EmptyEvents({ hasLocation, unavailableSources, errors }: { hasLocation:
   return (
     <div className="greet-empty-events">
       <span className="greet-empty-events__icon"><CalendarDays size={21} /></span>
-      <strong>{errors.length ? 'Event listings could not load.' : hasLocation ? 'No upcoming events found in this radius.' : 'Start by choosing a place.'}</strong>
-      <span>{errors[0] ?? (hasLocation && unavailableSources.length ? 'Live listings are still being connected for ' + unavailableSources.join(' and ') + '. Try a community event or check back soon.' : hasLocation ? 'Try a wider radius, or check back as local organizers add gatherings.' : 'Search any town, state, or ZIP to load real nearby events.')}</span>
+      <strong>{errors.length ? 'Event listings could not load.' : hasLocation ? `No upcoming events found within ${EVENT_SEARCH_RADIUS_MILES} miles.` : 'Start by choosing a place.'}</strong>
+      <span>{errors[0] ?? (hasLocation && unavailableSources.length ? 'Live listings are still being connected for ' + unavailableSources.join(' and ') + '. Try a community event or check back soon.' : hasLocation ? 'Try another nearby town or check back as local organizers add gatherings.' : 'Search any town, state, or ZIP to load real nearby events.')}</span>
     </div>
   )
 }

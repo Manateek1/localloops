@@ -9,7 +9,7 @@ import { EventDetail, type RidePlan } from './features/EventDetail'
 import { ExplorePage } from './features/ExplorePage'
 import { InboxPage } from './features/InboxPage'
 import { MessagesPage } from './features/MessagesPage'
-import { getCommunityEvents, getSourcedEvents, sortNearby, type EventFeedState } from './lib/events'
+import { getCommunityEvents, getSourcedEvents, getUserEventHistoryCategories, sortNearby, type EventFeedState } from './lib/events'
 import { searchLocation } from './lib/location'
 import type { CommunityEvent, EventSource, LocationResult, Profile } from './data/models'
 import type { FriendshipRow, MessageRow, ProfileRow } from './lib/supabase/database.types'
@@ -23,12 +23,12 @@ function App() {
   const [user, setUser] = useState<User | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [eventHistoryCategories, setEventHistoryCategories] = useState<string[]>([])
   const [profileRefresh, setProfileRefresh] = useState(0)
   const [authOpen, setAuthOpen] = useState(false)
   const [eventComposerOpen, setEventComposerOpen] = useState(false)
   const [location, setLocation] = useState<LocationResult | null>(null)
   const [locationQuery, setLocationQuery] = useState('')
-  const [radius, setRadius] = useState(100)
   const [events, setEvents] = useState<CommunityEvent[]>([])
   const [feedSources, setFeedSources] = useState<EventFeedState>(noSources)
   const [feedErrors, setFeedErrors] = useState<string[]>([])
@@ -88,6 +88,18 @@ function App() {
   }, [user?.id, profileRefresh])
 
   useEffect(() => {
+    if (!supabaseClient || !user) {
+      setEventHistoryCategories([])
+      return
+    }
+    let active = true
+    void getUserEventHistoryCategories(supabaseClient, user.id)
+      .then((categories) => { if (active) setEventHistoryCategories(categories) })
+      .catch(() => { if (active) setEventHistoryCategories([]) })
+    return () => { active = false }
+  }, [user?.id])
+
+  useEffect(() => {
     if (!location) {
       setEvents([])
       setFeedSources(noSources)
@@ -97,11 +109,11 @@ function App() {
     let active = true
     setFeedLoading(true)
     void Promise.all([
-      getSourcedEvents(location, radius),
-      getCommunityEvents(supabaseClient, location, radius),
+      getSourcedEvents(location),
+      getCommunityEvents(supabaseClient, location),
     ]).then(([feed, community]) => {
       if (!active) return
-      setEvents(sortNearby([...feed.events, ...community]))
+      setEvents([...feed.events, ...community])
       setFeedSources(feed.sources)
       setFeedErrors(feed.errors)
     }).catch(() => {
@@ -110,7 +122,7 @@ function App() {
       setFeedErrors(['Event search could not connect. Try again in a moment.'])
     }).finally(() => { if (active) setFeedLoading(false) })
     return () => { active = false }
-  }, [location, radius, profileRefresh])
+  }, [location])
 
   useEffect(() => {
     if (!supabaseClient || !user || !['community', 'inbox', 'messages'].includes(page)) {
@@ -168,6 +180,11 @@ function App() {
     discoverableProfiles.forEach((item) => map.set(item.id, item))
     return map
   }, [profile, discoverableProfiles])
+
+  const recommendationInterests = useMemo(() => [...new Set([
+    ...(profile?.interests ?? []),
+    ...eventHistoryCategories,
+  ])], [profile?.interests, eventHistoryCategories])
 
   const selectedThread = friendships.find((friendship) => friendship.id === selectedThreadId) ?? null
   const threadUserId = selectedThread && user
@@ -315,6 +332,11 @@ function App() {
     if (result.error) notify(result.error.message)
     else {
       setGoing(nextGoing)
+      if (event.source === 'community') {
+        void getUserEventHistoryCategories(supabaseClient, user.id)
+          .then(setEventHistoryCategories)
+          .catch(() => setEventHistoryCategories([]))
+      }
       notify(nextGoing ? 'Your RSVP is saved.' : 'Your RSVP was removed.')
     }
   }
@@ -410,10 +432,9 @@ function App() {
           sources={feedSources}
           errors={feedErrors}
           query={locationQuery}
-          radius={radius}
+          interests={recommendationInterests}
           onQueryChange={setLocationQuery}
           onSearch={submitLocation}
-          onRadiusChange={setRadius}
           onOpenEvent={openEvent}
           onCreateEvent={openEventComposer}
           canCreateEvent={Boolean(user)}
@@ -438,6 +459,7 @@ function App() {
         />}
         {page === 'community' && <CommunityPage
           profiles={discoverableProfiles}
+          profile={profile}
           friendships={friendships}
           userId={user?.id ?? null}
           stateCode={location?.stateCode ?? null}

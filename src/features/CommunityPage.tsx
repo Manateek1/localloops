@@ -6,6 +6,7 @@ import { US_STATES } from '../data/models'
 
 type CommunityPageProps = {
   profiles: Profile[]
+  profile: Profile | null
   friendships: FriendshipRow[]
   userId: string | null
   stateCode: string | null
@@ -16,11 +17,16 @@ type CommunityPageProps = {
   onSignIn: () => void
 }
 
-export function CommunityPage({ profiles, friendships, userId, stateCode, loading, onRequest, onAccept, onMessage, onSignIn }: CommunityPageProps) {
+export function CommunityPage({ profiles, profile, friendships, userId, stateCode, loading, onRequest, onAccept, onMessage, onSignIn }: CommunityPageProps) {
   const [query, setQuery] = useState('')
-  const visible = useMemo(() => profiles.filter((profile) =>
-    `${profile.display_name} ${profile.home_region ?? ''} ${profile.interests.join(' ')} ${profile.bio ?? ''}`
-      .toLowerCase().includes(query.toLowerCase())), [profiles, query])
+  const sharedInterests = (candidate: Profile) => {
+    const candidateInterests = new Set(candidate.interests.map((interest) => interest.trim().toLowerCase()))
+    return (profile?.interests ?? []).filter((interest) => candidateInterests.has(interest.trim().toLowerCase()))
+  }
+  const visible = useMemo(() => profiles.filter((candidate) =>
+    `${candidate.display_name} ${candidate.home_region ?? ''} ${candidate.interests.join(' ')} ${candidate.bio ?? ''}`
+      .toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => sharedInterests(b).length - sharedInterests(a).length), [profiles, profile, query])
   const initials = (name: string) => name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'N'
   const stateName = US_STATES.find(([code]) => code === stateCode)?.[1]
 
@@ -58,6 +64,7 @@ export function CommunityPage({ profiles, friendships, userId, stateCode, loadin
                   <h2 translate="no">{profile.display_name}</h2>
                   {profile.home_region && <p className="greet-member-location" translate="no"><MapPin size={13} />{profile.home_region}</p>}
                   {profile.bio && <p className="greet-member-bio" translate="no">{profile.bio}</p>}
+                  {sharedInterests(profile).length > 0 && <p className="greet-member-match">Shares {sharedInterests(profile).slice(0, 3).join(', ')} with you</p>}
                   {profile.interests.length > 0 && <div className="greet-tag-list" translate="no">{profile.interests.slice(0, 5).map((interest) => <span key={interest}>{interest}</span>)}</div>}
                 </div>
                 <div className="greet-member-action">

@@ -2,7 +2,7 @@
 
 LocalLoops helps people find public events and neighbors in their area, including rural communities where nearby plans may be spread across several towns. The app searches real listings from Ticketmaster and the National Park Service, shows public gatherings created by LocalLoops members, and never fills gaps with sample people or invented events.
 
-Location search accepts a U.S. ZIP code or a town and state, and uses an approximate postal-place center. The map uses OpenFreeMap tiles based on OpenStreetMap data. Search works in all 50 states; listing coverage depends on the event providers and gatherings members publish.
+Location search accepts a U.S. ZIP code or a town and state, and uses an approximate postal-place center. Every search covers a 30-mile radius around that center, drawn on the map. The map uses OpenFreeMap tiles based on OpenStreetMap data. Search works in all 50 states; listing coverage depends on the event providers and gatherings members publish.
 
 ## Run locally
 
@@ -25,6 +25,8 @@ VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 ```
 
+For immediate email/password signup without verification, turn off **Confirm email** in the project's Supabase Auth email provider settings. Hosted Supabase projects require email confirmation by default; local Supabase uses the checked-in setting `enable_confirmations = false`.
+
 Apply the checked-in migration using the Supabase CLI:
 
 ```sh
@@ -33,7 +35,7 @@ supabase link --project-ref YOUR_PROJECT_REF
 supabase db push
 ```
 
-The migration enables row-level security on every app table. Profiles are visible only to authenticated members who opted into discovery; direct messages require an accepted connection. Members can optionally add a broad town or region and state to be discoverable in that state. LocalLoops stores public pickup-area labels, not home addresses or live member coordinates. Configure the Supabase Auth site URL and allowed redirect URLs for local development and each deployed app origin.
+The migration enables row-level security on every app table. Profiles are visible only to authenticated members who opted into discovery; Community ranks those opted-in profiles by shared interests. Nearby events are ranked using a member's saved interests and their own past community-event RSVPs. Direct messages require an accepted connection. Members can optionally add a broad town or region and state to be discoverable in that state. LocalLoops stores public pickup-area labels, not home addresses or live member coordinates. Configure the Supabase Auth site URL and allowed redirect URLs for local development and each deployed app origin.
 
 ## Connect real event sources
 

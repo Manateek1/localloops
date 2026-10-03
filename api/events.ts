@@ -1,3 +1,5 @@
+import { EVENT_SEARCH_RADIUS_MILES } from '../src/data/constants.ts'
+
 type VercelRequest = { method?: string; url?: string }
 type VercelResponse = {
   setHeader(name: string, value: string): void
@@ -38,7 +40,7 @@ const milesBetween = (lat1: number, lon1: number, lat2: number, lon2: number) =>
 
 const asText = (value: unknown) => typeof value === 'string' ? value.trim() : ''
 
-function encodeGeohash(latitude: number, longitude: number, precision = 6) {
+function encodeGeohash(latitude: number, longitude: number, precision = 8) {
   const alphabet = '0123456789bcdefghjkmnpqrstuvwxyz'
   let latRange: [number, number] = [-90, 90]
   let lonRange: [number, number] = [-180, 180]
@@ -113,7 +115,7 @@ async function getTicketmasterEvents(latitude: number, longitude: number, radius
     const distanceMiles = milesBetween(latitude, longitude, lat, lon)
     const sourceId = asText(event.id)
     const title = asText(event.name)
-    if (!sourceId || !title || distanceMiles > radius) return []
+    if (!sourceId || !title || distanceMiles > EVENT_SEARCH_RADIUS_MILES) return []
     return [{
       id: `ticketmaster:${sourceId}`,
       sourceId,
@@ -208,8 +210,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
   const url = new URL(request.url ?? '/', 'https://localloops.invalid')
   const latitude = Number(url.searchParams.get('lat'))
   const longitude = Number(url.searchParams.get('lon'))
-  const requestedRadius = Number(url.searchParams.get('radius') ?? 50)
-  const radius = Math.min(250, Math.max(5, Number.isFinite(requestedRadius) ? requestedRadius : 50))
+  const radius = EVENT_SEARCH_RADIUS_MILES
   const stateCode = (url.searchParams.get('state') ?? '').toUpperCase()
   if (!Number.isFinite(latitude) || Math.abs(latitude) > 90
     || !Number.isFinite(longitude) || Math.abs(longitude) > 180
@@ -222,7 +223,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
     nps: process.env.NPS_API_KEY ? 'ready' : 'not_configured',
   }
   const results = await Promise.allSettled([
-    getTicketmasterEvents(latitude, longitude, radius),
+    getTicketmasterEvents(latitude, longitude, radius + 1),
     getNpsEvents(latitude, longitude, radius, stateCode),
   ])
   const events: PublicEvent[] = []

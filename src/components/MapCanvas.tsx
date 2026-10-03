@@ -1,18 +1,51 @@
 import { useEffect, useRef } from 'react'
-import { Map as MapLibreMap, Marker, NavigationControl, ScaleControl, setWorkerUrl } from 'maplibre-gl'
+import { LngLatBounds, Map as MapLibreMap, Marker, NavigationControl, ScaleControl, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl'
 import mapWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { CommunityEvent, LocationResult } from '../data/models'
+import { EVENT_SEARCH_RADIUS_MILES } from '../data/constants'
+import type { Feature, Polygon } from 'geojson'
 
 setWorkerUrl(mapWorkerUrl)
 
 type MapCanvasProps = {
   location: LocationResult | null
   events: CommunityEvent[]
+  showSearchRadius?: boolean
   onOpenEvent: (eventId: string) => void
 }
 
-export function MapCanvas({ location, events, onOpenEvent }: MapCanvasProps) {
+const SEARCH_RADIUS_SOURCE = 'localloops-search-radius'
+
+function searchRadiusFeature(location: LocationResult): Feature<Polygon> {
+  const earthRadiusKm = 6371.0088
+  const angularRadius = EVENT_SEARCH_RADIUS_MILES * 1.609344 / earthRadiusKm
+  const latitude = location.latitude * Math.PI / 180
+  const longitude = location.longitude * Math.PI / 180
+  const steps = 72
+  const coordinates: Array<[number, number]> = []
+
+  for (let step = 0; step <= steps; step += 1) {
+    const bearing = step * 2 * Math.PI / steps
+    const circleLatitude = Math.asin(
+      Math.sin(latitude) * Math.cos(angularRadius)
+      + Math.cos(latitude) * Math.sin(angularRadius) * Math.cos(bearing),
+    )
+    const circleLongitude = longitude + Math.atan2(
+      Math.sin(bearing) * Math.sin(angularRadius) * Math.cos(latitude),
+      Math.cos(angularRadius) - Math.sin(latitude) * Math.sin(circleLatitude),
+    )
+    coordinates.push([circleLongitude * 180 / Math.PI, circleLatitude * 180 / Math.PI])
+  }
+
+  return {
+    type: 'Feature',
+    properties: {},
+    geometry: { type: 'Polygon', coordinates: [coordinates] },
+  }
+}
+
+export function MapCanvas({ location, events, showSearchRadius = false, onOpenEvent }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef<Marker[]>([])
@@ -49,9 +82,65 @@ export function MapCanvas({ location, events, onOpenEvent }: MapCanvasProps) {
   }, [])
 
   useEffect(() => {
-    if (!location || !mapRef.current) return
-    mapRef.current.flyTo({ center: [location.longitude, location.latitude], zoom: location.zoom, duration: 900 })
-  }, [location])
+    const map = mapRef.current
+    if (!location || !map) return
+
+    const updateMapView = () => {
+      if (showSearchRadius) {
+        const coordinates = searchRadiusFeature(location).geometry.coordinates[0]
+        const first = coordinates[0] as [number, number]
+        const bounds = new LngLatBounds(first, first)
+        coordinates.slice(1).forEach((coordinate) => bounds.extend(coordinate as [number, number]))
+        map.fitBounds(bounds, { padding: 40, maxZoom: 7.8, duration: 900 })
+      } else {
+        map.flyTo({ center: [location.longitude, location.latitude], zoom: location.zoom, duration: 900 })
+      }
+    }
+
+    if (showSearchRadius) map.on('resize', updateMapView)
+    if (map.isStyleLoaded()) updateMapView()
+    else map.once('load', updateMapView)
+    return () => {
+      map.off('resize', updateMapView)
+      map.off('load', updateMapView)
+    }
+  }, [location, showSearchRadius])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !location || !showSearchRadius) return
+
+    const updateSearchRadius = () => {
+      if (!map.isStyleLoaded()) return
+      const source = map.getSource(SEARCH_RADIUS_SOURCE) as GeoJSONSource | undefined
+      if (source) {
+        source.setData(searchRadiusFeature(location))
+        return
+      }
+
+      map.addSource(SEARCH_RADIUS_SOURCE, {
+        type: 'geojson',
+        data: searchRadiusFeature(location),
+      })
+      const firstSymbolLayer = map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id
+      map.addLayer({
+        id: 'localloops-search-radius-fill',
+        type: 'fill',
+        source: SEARCH_RADIUS_SOURCE,
+        paint: { 'fill-color': '#6c9a77', 'fill-opacity': 0.14 },
+      }, firstSymbolLayer)
+      map.addLayer({
+        id: 'localloops-search-radius-outline',
+        type: 'line',
+        source: SEARCH_RADIUS_SOURCE,
+        paint: { 'line-color': '#47785b', 'line-width': 2, 'line-opacity': 0.85 },
+      }, firstSymbolLayer)
+    }
+
+    if (map.isStyleLoaded()) updateSearchRadius()
+    else map.once('load', updateSearchRadius)
+    return () => { map.off('load', updateSearchRadius) }
+  }, [location, showSearchRadius])
 
   useEffect(() => {
     const map = mapRef.current
@@ -72,8 +161,9 @@ export function MapCanvas({ location, events, onOpenEvent }: MapCanvasProps) {
   }, [events])
 
   return (
-    <div className="greet-map" role="region" aria-label="Map of real nearby events">
+    <div className="greet-map" role="region" aria-label={showSearchRadius ? `Map of events within ${EVENT_SEARCH_RADIUS_MILES} miles` : 'Map of real nearby events'}>
       <div ref={containerRef} className="greet-map__canvas" />
+      {showSearchRadius && location && <div className="greet-map__radius-label"><span aria-hidden="true" />{EVENT_SEARCH_RADIUS_MILES}-mile search radius</div>}
       {!location && <div className="greet-map__prompt"><span>Start with any U.S. town or ZIP code.</span></div>}
       {location && events.length === 0 && <div className="greet-map__prompt greet-map__prompt--location"><span>The map is centered near {location.label}.</span></div>}
     </div>
