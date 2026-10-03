@@ -63,7 +63,7 @@ export type EventRsvpRow = {
 }
 
 export type ExternalEventRsvpRow = {
-  event_source: 'ticketmaster' | 'nps'
+  event_source: 'ticketmaster' | 'nps' | 'ticketfairy'
   source_event_id: string
   user_id: string
   status: 'going' | 'interested'
@@ -99,7 +99,7 @@ export type RidePostRow = {
 
 export type ExternalRidePostRow = {
   id: string
-  event_source: 'ticketmaster' | 'nps'
+  event_source: 'ticketmaster' | 'nps' | 'ticketfairy'
   source_event_id: string
   user_id: string
   kind: 'request' | 'offer'

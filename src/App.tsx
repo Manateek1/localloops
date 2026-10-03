@@ -19,6 +19,7 @@ import { TranslationNotice } from './features/LanguageProvider'
 const noSources: EventFeedState = {
   ticketmaster: 'not_configured',
   nps: 'not_configured',
+  ticketfairy: 'not_configured',
   community: 'not_configured',
 }
 

@@ -6,6 +6,7 @@ import type { Database } from './supabase/database.types'
 export type EventFeedState = {
   ticketmaster: 'ready' | 'not_configured' | 'unavailable'
   nps: 'ready' | 'not_configured' | 'unavailable'
+  ticketfairy: 'ready' | 'not_configured' | 'unavailable'
   community: 'ready' | 'not_configured' | 'unavailable'
 }
 
@@ -19,6 +20,7 @@ export type CommunityEventFeed = {
 export const emptySources: EventFeedState = {
   ticketmaster: 'not_configured',
   nps: 'not_configured',
+  ticketfairy: 'not_configured',
   community: 'not_configured',
 }
 
@@ -41,7 +43,7 @@ export async function getSourcedEvents(location: LocationResult, radius: number)
   } catch {
     return {
       events: [],
-      sources: { ticketmaster: 'unavailable', nps: 'unavailable', community: 'not_configured' },
+      sources: { ticketmaster: 'unavailable', nps: 'unavailable', ticketfairy: 'unavailable', community: 'not_configured' },
       errors: ['Event search could not connect. Try again in a moment.'],
     }
   }

@@ -1,4 +1,4 @@
-export type EventSource = 'ticketmaster' | 'nps' | 'community'
+export type EventSource = 'ticketmaster' | 'nps' | 'ticketfairy' | 'community'
 
 export type LocationResult = {
   id: string

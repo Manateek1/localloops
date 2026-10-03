@@ -56,6 +56,7 @@ export function ExplorePage({
   }
 
   const unavailableSources = [
+    sources.ticketfairy === 'not_configured' ? 'Ticket Fairy' : '',
     sources.ticketmaster === 'not_configured' ? 'Ticketmaster' : '',
     sources.nps === 'not_configured' ? 'National Park Service' : '',
     sources.community === 'not_configured' ? 'the LocalLoops database' : '',
@@ -105,6 +106,7 @@ export function ExplorePage({
               <Suspense fallback={<div className="greet-map greet-map--loading" role="status">Loading the live map…</div>}><MapCanvas location={location} events={filteredEvents} onOpenEvent={(id) => { const event = filteredEvents.find((item) => item.id === id); if (event) onOpenEvent(event) }} /></Suspense>
               <div className="greet-source-strip">
                 <span className="greet-source-strip__label">Event sources</span>
+                {sources.ticketfairy === 'ready' && <span><CalendarDays size={14} />Ticket Fairy</span>}
                 {sources.ticketmaster === 'ready' && <span><CalendarDays size={14} />Ticketmaster</span>}
                 {sources.nps === 'ready' && <span><Trees size={14} />National Park Service</span>}
                 {sources.community === 'ready' && <span><UsersIcon />LocalLoops gatherings</span>}
@@ -160,7 +162,7 @@ function EmptyEvents({ hasLocation, unavailableSources, errors }: { hasLocation:
     <div className="greet-empty-events">
       <span className="greet-empty-events__icon"><CalendarDays size={21} /></span>
       <strong>{errors.length ? 'Event listings could not load.' : hasLocation ? 'No upcoming events found in this radius.' : 'Start by choosing a place.'}</strong>
-      <span>{errors[0] ?? (hasLocation && unavailableSources.length ? 'Live listings are still being connected for ' + unavailableSources.join(' and ') + '. Try a community event or check back soon.' : hasLocation ? 'Try a wider radius, or check back as local organizers add gatherings.' : 'Search any town, state, or ZIP to load real nearby events.')}</span>
+      <span>{errors[0] ?? (hasLocation && unavailableSources.length ? unavailableSources.join(' and ') + ' are not connected yet. Public listings vary by area; try a wider radius or check back later.' : hasLocation ? 'Public listings vary by area. Try a wider radius or check back later as organizers post more events.' : 'Search any town, state, or ZIP to load real nearby events.')}</span>
     </div>
   )
 }
