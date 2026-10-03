@@ -69,4 +69,4 @@ Import this repository into Vercel with the Vite framework preset. Add the Supab
 
 ## Scope
 
-LocalLoops has email/password sign-in, profiles, opt-in member discovery, connection requests, accepted-connection messages, public community events, event RSVPs, and public-place ride coordination. The large sprout character is the friendly product guide. The voice interface is wired to ElevenLabs but needs an agent ID and server API key in deployment settings before a live conversation can start; Gemma and AI answers grounded in live LocalLoops data are not connected.
+LocalLoops has email/password sign-in, profiles, opt-in member discovery, connection requests, accepted-connection messages, public community events, event RSVPs, and public-place ride coordination. The large sprout character is the friendly product guide. The homepage sample conversation is an illustrative preview, not a live AI exchange. The voice interface is wired to ElevenLabs but needs an agent ID and server API key in deployment settings before a live conversation can start; Gemma and AI answers grounded in live LocalLoops data are not connected.

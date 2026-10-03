@@ -1,5 +1,5 @@
 import { Suspense, lazy, useMemo, useState, type FormEvent } from 'react'
-import { CalendarDays, Compass, List, Map, MapPin, Plus, Search, Trees } from 'lucide-react'
+import { CalendarDays, Compass, List, Map, MapPin, MessageCircle, Plus, Search, Trees } from 'lucide-react'
 import type { CommunityEvent, LocationResult } from '../data/models'
 import type { EventFeedState } from '../lib/events'
 import { EventCard } from '../components/EventCard'
@@ -55,14 +55,15 @@ export function ExplorePage({
 
   return (
     <div className="greet-page greet-explore-page">
-      <div className="greet-explore-heading">
-        <div>
+      <section className="greet-home-hero" aria-label="Find local plans with LocalLoops">
+        <div className="greet-home-hero__copy">
           <p className="greet-eyebrow">{location ? 'Good things are happening nearby' : 'A wider circle, close to home'}</p>
           <h1>{location ? 'Real plans around ' + location.label + '.' : 'Find a good plan, wherever home is.'}</h1>
-          <p>Discover real public events and local gatherings across all 50 states.</p>
+          <p className="greet-home-hero__intro">Discover real public events and local gatherings across all 50 states.</p>
+          <button className="greet-button greet-button--primary" type="button" onClick={canCreateEvent ? onCreateEvent : onSignIn}><Plus size={17} />Host a gathering</button>
         </div>
-        <button className="greet-button greet-button--primary" type="button" onClick={canCreateEvent ? onCreateEvent : onSignIn}><Plus size={17} />Host a gathering</button>
-      </div>
+        <GuideChatPreview />
+      </section>
 
       <section className="greet-search-panel" aria-label="Find events near a location">
         <form className="greet-location-search" onSubmit={submitSearch}>
@@ -116,6 +117,31 @@ export function ExplorePage({
       <VoiceGuide signedIn={canCreateEvent} onSignIn={onSignIn} />
       <p className="greet-privacy-note"><MapPin size={14} />Location searches use town or ZIP centers. LocalLoops does not save your precise location.</p>
     </div>
+  )
+}
+
+function GuideChatPreview() {
+  return (
+    <aside className="greet-guide-preview" aria-label="Sample conversation with the LocalLoops guide">
+      <div className="greet-guide-preview__header">
+        <div>
+          <span className="greet-guide-preview__eyebrow"><MessageCircle size={13} />Sample conversation</span>
+          <strong>Meet your LocalLoops guide</strong>
+        </div>
+        <span className="greet-guide-preview__badge">Example</span>
+      </div>
+      <div className="greet-guide-preview__body">
+        <div className="greet-guide-preview__thread" role="group" aria-label="Illustrative chat messages">
+          <p className="greet-guide-preview__user">I’m outside town. What’s nearby this weekend?</p>
+          <div className="greet-guide-preview__reply">
+            <span>LocalLoops guide</span>
+            <p>Search a town or ZIP to find real public events and neighbor-hosted gatherings nearby.</p>
+          </div>
+        </div>
+        <img src="/images/localloops-sprout.png" alt="The friendly LocalLoops guide character" />
+      </div>
+      <p className="greet-guide-preview__footnote">An example of how your local guide can help.</p>
+    </aside>
   )
 }
 
