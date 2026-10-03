@@ -32,6 +32,7 @@ function App() {
   const [events, setEvents] = useState<CommunityEvent[]>([])
   const [feedSources, setFeedSources] = useState<EventFeedState>(noSources)
   const [feedErrors, setFeedErrors] = useState<string[]>([])
+  const [locationError, setLocationError] = useState('')
   const [feedLoading, setFeedLoading] = useState(false)
   const [socialLoading, setSocialLoading] = useState(false)
   const [socialRefresh, setSocialRefresh] = useState(0)
@@ -186,12 +187,15 @@ function App() {
 
   const submitLocation = async (query: string) => {
     setLocationQuery(query)
+    setLocationError('')
     try {
       const nextLocation = await searchLocation(query)
       setLocation(nextLocation)
       notify('Showing real events near ' + nextLocation.label + '.')
     } catch (error) {
-      notify(error instanceof Error ? error.message : 'We could not find that place.')
+      const message = error instanceof Error ? error.message : 'We could not find that place.'
+      setLocationError(message)
+      notify(message)
     }
   }
 
@@ -409,9 +413,10 @@ function App() {
           loading={feedLoading}
           sources={feedSources}
           errors={feedErrors}
+          locationError={locationError}
           query={locationQuery}
           radius={radius}
-          onQueryChange={setLocationQuery}
+          onQueryChange={(value) => { setLocationQuery(value); setLocationError('') }}
           onSearch={submitLocation}
           onRadiusChange={setRadius}
           onOpenEvent={openEvent}

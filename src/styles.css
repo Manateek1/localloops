@@ -129,6 +129,10 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-map-marker--nps { background: #718958; }
 .greet-map-marker--community { background: #e19265; }
 .greet-map-marker--ticketmaster { background: #0b4a37; }
+.greet-map-search-center { position: relative; display: block; width: 24px; height: 24px; border: 3px solid #fff; border-radius: 50%; background: rgba(225,146,101,.28); box-shadow: 0 0 0 7px rgba(225,146,101,.2), 0 2px 8px rgba(22,54,37,.25); }
+.greet-map-search-center::after { content: ''; position: absolute; inset: 6px; border-radius: 50%; background: #d36f54; }
+.greet-search-status { min-height: 1em; }
+.greet-search-status.is-error { color: #a94437; }
 .greet-source-strip { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 17px; padding: 12px 3px 0; color: #607166; font-size: 10px; }
 .greet-source-strip > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .greet-source-strip svg { color: var(--forest); }
