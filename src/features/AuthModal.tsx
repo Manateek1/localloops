@@ -22,7 +22,7 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
     setError('')
     setMessage('')
     if (!client) {
-      setError('Sign-in is not connected yet. The team needs to add the GreetMe Supabase project URL and publishable key.')
+      setError('Sign-in is not connected yet. The team needs to add the LocalLoops Supabase project URL and publishable key.')
       return
     }
     setBusy(true)
@@ -54,13 +54,13 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
   return (
     <div className="greet-modal-scrim" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
       <section className="greet-auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
-        <button className="greet-modal-back" type="button" onClick={onClose}><ArrowLeft size={16} /> Back to GreetMe</button>
+        <button className="greet-modal-back" type="button" onClick={onClose}><ArrowLeft size={16} /> Back to LocalLoops</button>
         <div className="greet-auth-card__mark"><Leaf size={20} /></div>
         <p className="greet-eyebrow">A little closer to community</p>
         <h2 id="auth-title">{!client ? 'Account access is coming soon.' : mode === 'sign-in' ? 'Welcome back.' : 'Come on in.'}</h2>
-        <p className="greet-auth-card__copy">{!client ? 'GreetMe is preparing its member accounts.' : mode === 'sign-in' ? 'Sign in to save your plans and meet real neighbors.' : 'Create an account to RSVP, host a gathering, and meet neighbors.'}</p>
+        <p className="greet-auth-card__copy">{!client ? 'LocalLoops is preparing its member accounts.' : mode === 'sign-in' ? 'Sign in to save your plans and meet real neighbors.' : 'Create an account to RSVP, host a gathering, and meet neighbors.'}</p>
 
-        {!client ? <div className="greet-auth-setup" role="status"><Leaf size={18} /><p>The Supabase connection is not configured on this deployment yet. The team can enable sign-in once the GreetMe project is connected.</p></div> : <>
+        {!client ? <div className="greet-auth-setup" role="status"><Leaf size={18} /><p>The Supabase connection is not configured on this deployment yet. The team can enable sign-in once the LocalLoops project is connected.</p></div> : <>
           <div className="greet-auth-switch" role="tablist" aria-label="Account action">
             <button type="button" role="tab" aria-selected={mode === 'sign-in'} className={mode === 'sign-in' ? 'is-active' : ''} onClick={() => { setMode('sign-in'); setError(''); setMessage('') }}>Sign in</button>
             <button type="button" role="tab" aria-selected={mode === 'create'} className={mode === 'create' ? 'is-active' : ''} onClick={() => { setMode('create'); setError(''); setMessage('') }}>Create account</button>
@@ -74,7 +74,7 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
             {message && <p className="greet-form-message" role="status">{message}</p>}
             <button className="greet-button greet-button--primary greet-auth-submit" type="submit" disabled={busy}>{busy ? 'One moment…' : mode === 'sign-in' ? 'Sign in' : 'Create my account'}</button>
           </form>
-          <p className="greet-auth-card__privacy">Your profile shows only the details you choose to share. GreetMe never stores a home address.</p>
+          <p className="greet-auth-card__privacy">Your profile shows only the details you choose to share. LocalLoops never stores a home address.</p>
         </>}
       </section>
     </div>

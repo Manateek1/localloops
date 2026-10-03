@@ -106,9 +106,9 @@ function VoiceGuideControls({ signedIn, onSignIn }: VoiceGuideProps) {
     : busy ? 'Connecting…' : signedIn ? 'Your mic turns on only when you start.' : 'Sign in to have a voice chat.'
 
   return (
-    <aside className="greet-guide-card" aria-label="GreetMe voice guide">
+    <aside className="greet-guide-card" aria-label="LocalLoops voice guide">
       <div className="greet-guide-card__copy">
-        <span className="greet-guide-card__kicker"><Trees size={15} />Your GreetMe guide</span>
+        <span className="greet-guide-card__kicker"><Trees size={15} />Your LocalLoops guide</span>
         <h2>A friendly face for finding your people.</h2>
         <p>Ask out loud about local plans and getting connected. Your microphone is used only during a voice chat.</p>
         <p className="greet-guide-language-note">{languageNotice}</p>
@@ -122,7 +122,7 @@ function VoiceGuideControls({ signedIn, onSignIn }: VoiceGuideProps) {
         </div>
         <p className="greet-guide-status" role="status" aria-live="polite">{error || statusText}</p>
       </div>
-      <img src="/images/greetme-sprout.png" alt="A small smiling sprout character with open arms" />
+      <img src="/images/localloops-sprout.png" alt="A small smiling sprout character with open arms" />
       <span className="greet-guide-card__sparkle" aria-hidden="true"><Sparkles size={22} /></span>
     </aside>
   )

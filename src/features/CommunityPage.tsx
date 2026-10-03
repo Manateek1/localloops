@@ -36,14 +36,14 @@ export function CommunityPage({ profiles, friendships, userId, stateCode, loadin
       <div className="greet-page-heading">
         <p className="greet-eyebrow">Real neighbors, shared interests</p>
         <h1>A community grows one hello at a time.</h1>
-        <p>{stateName ? `Showing opt-in members who chose ${stateName} as their broad region, plus people connected to you.` : 'Only people who created a GreetMe account and chose to be discoverable appear here.'}</p>
+        <p>{stateName ? `Showing opt-in members who chose ${stateName} as their broad region, plus people connected to you.` : 'Only people who created a LocalLoops account and chose to be discoverable appear here.'}</p>
       </div>
       <label className="greet-community-search"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search names, regions, or interests" /></label>
 
       {!userId ? (
         <section className="greet-empty-card"><div className="greet-empty-card__icon"><Leaf size={21} /></div><h2>Sign in to meet your neighbors.</h2><p>Community profiles are visible only to signed-in members.</p><button className="greet-button greet-button--primary" type="button" onClick={onSignIn}>Sign in</button></section>
       ) : loading ? <div className="greet-loading" role="status">Finding discoverable neighbors…</div> : (
-        <section className="greet-member-list" aria-label="Discoverable GreetMe members">
+        <section className="greet-member-list" aria-label="Discoverable LocalLoops members">
           {visible.map((profile) => {
             const relationship = relationshipWith(profile.id)
             const accepted = relationship?.status === 'accepted'
@@ -72,10 +72,10 @@ export function CommunityPage({ profiles, friendships, userId, stateCode, loadin
               </article>
             )
           })}
-          {!visible.length && <div className="greet-empty-card greet-empty-card--wide"><div className="greet-empty-card__icon"><Leaf size={21} /></div><h2>{profiles.length ? 'No neighbors match that search yet.' : 'Your community is just getting started.'}</h2><p>{profiles.length ? 'Try another name, region, or interest.' : 'When people nearby join GreetMe and opt in to discovery, they will appear here. Invite a library, local group, or neighbor to get things started.'}</p></div>}
+          {!visible.length && <div className="greet-empty-card greet-empty-card--wide"><div className="greet-empty-card__icon"><Leaf size={21} /></div><h2>{profiles.length ? 'No neighbors match that search yet.' : 'Your community is just getting started.'}</h2><p>{profiles.length ? 'Try another name, region, or interest.' : 'When people nearby join LocalLoops and opt in to discovery, they will appear here. Invite a library, local group, or neighbor to get things started.'}</p></div>}
         </section>
       )}
-      <p className="greet-privacy-note"><MapPin size={14} />People choose whether they appear. GreetMe shows broad regions only, never home addresses or live locations.</p>
+      <p className="greet-privacy-note"><MapPin size={14} />People choose whether they appear. LocalLoops shows broad regions only, never home addresses or live locations.</p>
     </div>
   )
 }

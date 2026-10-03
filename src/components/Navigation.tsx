@@ -28,7 +28,7 @@ export function Header({ page, userName, onNavigate, onSignIn, onSignOut }: Navi
   const activePage = activeFor(page)
   return (
     <header className="greet-header">
-      <button className="greet-header__brand" type="button" onClick={() => onNavigate('explore')} aria-label="GreetMe home"><Brand /></button>
+      <button className="greet-header__brand" type="button" onClick={() => onNavigate('explore')} aria-label="LocalLoops home"><Brand /></button>
       <nav className="greet-nav" aria-label="Main navigation">
         {items.map(({ page: itemPage, label, Icon }) => (
           <button className={`greet-nav__item ${activePage === itemPage ? 'is-active' : ''}`} key={itemPage} type="button" onClick={() => onNavigate(itemPage)}>

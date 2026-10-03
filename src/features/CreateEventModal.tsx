@@ -48,7 +48,7 @@ export function CreateEventModal({ client, userId, profile, location, onClose, o
       latitude: location.latitude,
       longitude: location.longitude,
       category: 'Community',
-      source_name: 'GreetMe community',
+      source_name: 'LocalLoops community',
       source_url: null,
     }).select('*').single()
     setBusy(false)
@@ -84,7 +84,7 @@ export function CreateEventModal({ client, userId, profile, location, onClose, o
   return (
     <div className="greet-modal-scrim" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
       <section className="greet-compose-card" role="dialog" aria-modal="true" aria-labelledby="compose-title">
-        <button className="greet-modal-back" type="button" onClick={onClose}><ArrowLeft size={16} /> Back to GreetMe</button>
+        <button className="greet-modal-back" type="button" onClick={onClose}><ArrowLeft size={16} /> Back to LocalLoops</button>
         <div className="greet-compose-icon"><Trees size={21} /></div>
         <p className="greet-eyebrow">Make room for a new hello</p>
         <h2 id="compose-title">Host a public gathering.</h2>
@@ -95,7 +95,7 @@ export function CreateEventModal({ client, userId, profile, location, onClose, o
           <label>When?<input type="datetime-local" required value={dateTime} onChange={(event) => setDateTime(event.target.value)} /></label>
           <label>What should neighbors know?<textarea rows={4} maxLength={1000} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Add useful details, what to bring, or how to recognize the group." /></label>
           <div className="greet-compose-location"><MapPin size={16} /><span>The map pin will mark the approximate center of {location?.label ?? 'your selected ZIP or town'}.</span></div>
-          <p className="greet-compose-privacy">GreetMe is for public gatherings. Use a public venue, not a home address, and include the exact public meeting point in your event details.</p>
+          <p className="greet-compose-privacy">LocalLoops is for public gatherings. Use a public venue, not a home address, and include the exact public meeting point in your event details.</p>
           {error && <p className="greet-form-message is-error" role="alert">{error}</p>}
           <button className="greet-button greet-button--primary greet-compose-submit" type="submit" disabled={busy || !location}>{busy ? 'Sharing…' : 'Share event with neighbors'}</button>
         </form>

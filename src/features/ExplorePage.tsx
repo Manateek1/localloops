@@ -98,7 +98,7 @@ export function ExplorePage({
                 <span className="greet-source-strip__label">Live sources</span>
                 {sources.ticketmaster === 'ready' && <span><CalendarDays size={14} />Ticketmaster</span>}
                 {sources.nps === 'ready' && <span><Trees size={14} />National Park Service</span>}
-                <span><UsersIcon />GreetMe gatherings</span>
+                <span><UsersIcon />LocalLoops gatherings</span>
               </div>
             </div>
             <div className="greet-event-list-column">
@@ -114,7 +114,7 @@ export function ExplorePage({
       </section>
 
       <VoiceGuide signedIn={canCreateEvent} onSignIn={onSignIn} />
-      <p className="greet-privacy-note"><MapPin size={14} />Location searches use town or ZIP centers. GreetMe does not save your precise location.</p>
+      <p className="greet-privacy-note"><MapPin size={14} />Location searches use town or ZIP centers. LocalLoops does not save your precise location.</p>
     </div>
   )
 }

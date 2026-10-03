@@ -173,7 +173,7 @@ function App() {
   const threadUserId = selectedThread && user
     ? (selectedThread.requester_id === user.id ? selectedThread.addressee_id : selectedThread.requester_id)
     : null
-  const threadProfileName = threadUserId ? profilesById.get(threadUserId)?.display_name ?? 'GreetMe neighbor' : 'GreetMe neighbor'
+  const threadProfileName = threadUserId ? profilesById.get(threadUserId)?.display_name ?? 'LocalLoops neighbor' : 'LocalLoops neighbor'
   const threadMessages = selectedThreadId ? messages.filter((message) => message.friendship_id === selectedThreadId) : []
 
   const notify = (message: string) => setToast(message)
@@ -390,7 +390,7 @@ function App() {
   }
 
   if (authLoading) {
-    return <div className="greet-app-loading" role="status"><span className="greet-loading-mark">✦</span><span>GreetMe is getting ready…</span></div>
+    return <div className="greet-app-loading" role="status"><span className="greet-loading-mark">✦</span><span>LocalLoops is getting ready…</span></div>
   }
 
   const userName = profile?.display_name ?? (user?.email ? user.email.split('@')[0] : null)

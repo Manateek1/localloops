@@ -1,4 +1,4 @@
--- GreetMe's initial product data model. External listings are fetched from their named sources.
+-- Initial LocalLoops product data model. External listings are fetched from their named sources.
 -- Every table is protected by RLS; authenticated grants are paired with narrow policies.
 
 create table public.profiles (

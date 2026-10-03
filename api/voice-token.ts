@@ -27,7 +27,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
   const elevenLabsKey = process.env.ELEVENLABS_API_KEY
   const agentId = process.env.ELEVENLABS_AGENT_ID
   if (!supabaseUrl || !supabaseKey || !elevenLabsKey || !agentId) {
-    return respond(response, 503, { code: 'voice_not_configured', message: 'The GreetMe voice guide is not connected yet.' })
+    return respond(response, 503, { code: 'voice_not_configured', message: 'The LocalLoops voice guide is not connected yet.' })
   }
 
   try {

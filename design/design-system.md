@@ -1,6 +1,6 @@
-# GreetMe visual system
+# LocalLoops visual system
 
-GreetMe uses a warm paper surface, deep forest green for primary actions, softened sage for community and map surfaces, and a small sun-coral accent. The system favors friendly editorial type, rounded but quiet controls, clear event photography, and open spacing.
+LocalLoops uses a warm paper surface, deep forest green for primary actions, softened sage for community and map surfaces, and a small sun-coral accent. The system favors friendly editorial type, rounded but quiet controls, clear event photography, and open spacing.
 
 ## Tokens
 
@@ -21,7 +21,7 @@ GreetMe uses a warm paper surface, deep forest green for primary actions, soften
 - Explore: Map/List toggle, location search for U.S. towns and ZIP codes, event filters, an OpenStreetMap-based map, and nearby listings from configured public sources.
 - Event detail: event image when supplied by the source, date and public place, RSVP, and broad-area ride coordination.
 - Community and Inbox: member profiles, connection requests, and messaging backed by Supabase; profiles stay private until a member opts into discovery.
-- GreetMe guide: the friendly sprout character anchors the visual identity. AI responses and voice are not enabled yet.
+- LocalLoops guide: the friendly sprout character anchors the visual identity. AI responses and voice are not enabled yet.
 
 ## Responsive behavior
 

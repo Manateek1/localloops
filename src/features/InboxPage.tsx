@@ -24,7 +24,7 @@ export function InboxPage({ userId, friendships, messages, profilesById, loading
     const otherId = friendship.requester_id === userId ? friendship.addressee_id : friendship.requester_id
     const threadMessages = messages.filter((message) => message.friendship_id === friendship.id)
     const latest = threadMessages.at(-1)
-    return { friendship, name: profilesById.get(otherId)?.display_name ?? 'GreetMe neighbor', latest }
+    return { friendship, name: profilesById.get(otherId)?.display_name ?? 'LocalLoops neighbor', latest }
   }).sort((a, b) => (b.latest?.created_at ?? '').localeCompare(a.latest?.created_at ?? '')), [accepted, messages, profilesById, userId])
 
   return (
@@ -51,11 +51,11 @@ export function InboxPage({ userId, friendships, messages, profilesById, loading
           ) : (
             <div className="greet-request-list">
               {incoming.map((friendship) => {
-                const name = profilesById.get(friendship.requester_id)?.display_name ?? 'GreetMe neighbor'
+                const name = profilesById.get(friendship.requester_id)?.display_name ?? 'LocalLoops neighbor'
                 return <article className="greet-request" key={friendship.id}><span className="greet-member-avatar greet-member-avatar--initials"><UserRound size={18} /></span><div><strong translate="no">{name}</strong><small>Would like to connect with you.</small></div><div className="greet-request__actions"><button className="greet-button greet-button--soft" type="button" onClick={() => onAccept(friendship.id)}><Check size={14} />Accept</button><button className="greet-button greet-button--quiet" type="button" onClick={() => onDismiss(friendship.id)}>Dismiss</button></div></article>
               })}
               {outgoing.map((friendship) => {
-                const name = profilesById.get(friendship.addressee_id)?.display_name ?? 'GreetMe neighbor'
+                const name = profilesById.get(friendship.addressee_id)?.display_name ?? 'LocalLoops neighbor'
                 return <article className="greet-request" key={friendship.id}><span className="greet-member-avatar greet-member-avatar--initials"><UserRound size={18} /></span><div><strong translate="no">{name}</strong><small>Your request is waiting for a reply.</small></div></article>
               })}
               {!incoming.length && !outgoing.length && <div className="greet-empty-inbox"><UserRound size={25} /><h2>No connection requests.</h2><p>When someone says hello, it will appear here.</p></div>}

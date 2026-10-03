@@ -205,7 +205,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
   response.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=3600')
   if (request.method !== 'GET') return response.status(405).json({ error: 'Use GET.' })
 
-  const url = new URL(request.url ?? '/', 'https://greetme.invalid')
+  const url = new URL(request.url ?? '/', 'https://localloops.invalid')
   const latitude = Number(url.searchParams.get('lat'))
   const longitude = Number(url.searchParams.get('lon'))
   const requestedRadius = Number(url.searchParams.get('radius') ?? 50)

@@ -8,7 +8,7 @@ import voiceTokenHandler from './api/voice-token.ts'
 
 function localApi(): Plugin {
   return {
-    name: 'greetme-local-api',
+    name: 'localloops-local-api',
     configureServer(server) {
       server.middlewares.use((request, response, next) => {
         const pathname = new URL(request.url ?? '/', 'http://localhost').pathname

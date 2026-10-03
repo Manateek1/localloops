@@ -19,11 +19,14 @@ type TranslationLanguageResponse = { languages?: TranslationLanguage[] }
 const LanguageContext = createContext<LanguageContextValue | null>(null)
 const ignoredSelector = 'script,style,noscript,textarea,input,[contenteditable="true"],[translate="no"],[data-translation-ignore],.greet-language-picker,.greet-translation-notice,.greet-map,.maplibregl-ctrl-attrib'
 const translatableAttributes = ['placeholder', 'aria-label', 'title'] as const
-const cacheStorageKey = 'greetme.google-translations.v1'
+const cacheStorageKey = 'localloops.google-translations.v1'
+const legacyCacheStorageKey = 'greetme.google-translations.v1'
 
 function initialLanguage() {
   try {
-    return window.localStorage.getItem('greetme.language') ?? 'en'
+    return window.localStorage.getItem('localloops.language')
+      ?? window.localStorage.getItem('greetme.language')
+      ?? 'en'
   } catch {
     return 'en'
   }
@@ -31,7 +34,9 @@ function initialLanguage() {
 
 function loadCache() {
   try {
-    const saved = JSON.parse(window.localStorage.getItem(cacheStorageKey) ?? '{}') as Record<string, string>
+    const saved = JSON.parse(window.localStorage.getItem(cacheStorageKey)
+      ?? window.localStorage.getItem(legacyCacheStorageKey)
+      ?? '{}') as Record<string, string>
     return new Map(Object.entries(saved))
   } catch {
     return new Map<string, string>()
@@ -82,7 +87,7 @@ export function LanguageProvider({ children }: TranslationContextProps) {
     setLanguageState(code)
     setTranslationStatus('')
     try {
-      window.localStorage.setItem('greetme.language', code)
+      window.localStorage.setItem('localloops.language', code)
     } catch {
       // Language selection remains available for this visit without storage.
     }

@@ -118,7 +118,7 @@ export function EventDetail({ event, going, ridePost, ridePosts, friendships, us
                   const mine = post.user_id === userId
                   return <div className="greet-ride-item" key={post.id}>
                     <div className="greet-ride-row"><span className={post.kind === 'offer' ? 'is-offer' : 'is-request'}>{post.kind === 'offer' ? 'Seat offered' : 'Ride requested'}</span><strong translate="no">{post.pickup_area}</strong>{post.kind === 'offer' && <small>{post.seats_available} {post.seats_available === 1 ? 'seat' : 'seats'}</small>}</div>
-                    <div className="greet-ride-contact"><span translate={mine ? undefined : 'no'}>{mine ? 'Your ride plan' : post.display_name ?? 'GreetMe member'}</span>
+                    <div className="greet-ride-contact"><span translate={mine ? undefined : 'no'}>{mine ? 'Your ride plan' : post.display_name ?? 'LocalLoops member'}</span>
                       {!mine && signedIn && (relationship?.status === 'accepted'
                         ? <button className="greet-button greet-button--quiet" type="button" onClick={() => relationship && onMessage(relationship.id)}>Message</button>
                         : incoming
@@ -145,7 +145,7 @@ export function EventDetail({ event, going, ridePost, ridePosts, friendships, us
           </section>
         </section>
         <aside className="greet-event-action">
-          <div className="greet-event-source-card"><span>EVENT SOURCE</span><strong>{event.sourceName}</strong><small>{event.source === 'community' ? event.hostName ? <>Hosted by <span translate="no">{event.hostName}</span></> : 'A local gathering shared by a GreetMe member.' : 'Details are provided by the event organizer.'}</small>
+          <div className="greet-event-source-card"><span>EVENT SOURCE</span><strong>{event.sourceName}</strong><small>{event.source === 'community' ? event.hostName ? <>Hosted by <span translate="no">{event.hostName}</span></> : 'A local gathering shared by a LocalLoops member.' : 'Details are provided by the event organizer.'}</small>
             {event.sourceUrl && <a href={event.sourceUrl} target="_blank" rel="noreferrer">Open original listing <ExternalLink size={14} /></a>}
           </div>
           {event.source === 'community' && event.hostName && <p className="greet-community-event-note"><Users size={15} />Shared by <span translate="no">{event.hostName}</span>. Meetups are public.</p>}

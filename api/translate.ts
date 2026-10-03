@@ -27,7 +27,7 @@ function apiKey() {
 }
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
-  const url = new URL(request.url ?? '/', 'https://greetme.invalid')
+  const url = new URL(request.url ?? '/', 'https://localloops.invalid')
   const listLanguages = request.method === 'GET' && url.searchParams.get('action') === 'languages'
   if (!listLanguages && request.method !== 'POST') return respond(response, 405, { code: 'method_not_allowed' })
 

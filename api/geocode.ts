@@ -28,7 +28,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
   response.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
   if (request.method !== 'GET') return response.status(405).json({ error: 'Use GET.' })
 
-  const url = new URL(request.url ?? '/', 'https://greetme.invalid')
+  const url = new URL(request.url ?? '/', 'https://localloops.invalid')
   const query = (url.searchParams.get('q') ?? '').trim().replace(/\s+/g, ' ')
   if (query.length < 3 || query.length > 100) {
     return response.status(400).json({ error: 'Enter a ZIP code or a town and state.' })
