@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.playwright-cli/
+.DS_Store
+.env
+.env.*
+!.env.example
+supabase/.branches/
+supabase/.temp/

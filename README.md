@@ -1,47 +1,30 @@
-# 🤝 GreetMeet
+# Greet Meet
 
-> **Discover local events, connect with nearby fitness enthusiasts, and chat with an AI assistant to stay active in your city.**
+Created for Dublin Hacx, Greet Meet explores how shared interests can lead to local events, new connections, and active plans. This mobile-first prototype includes an urban city experience and a rural mode connecting nearby towns, local calendars, libraries, Parks & Rec, and public-event ride coordination.
 
-Built for **Dublin Hacx** 🚀
+For the team's plain-language feature request and review process, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
----
+## Run the prototype
 
-## 💡 What is GreetMeet?
+```sh
+npm install
+npm run dev
+```
 
-**GreetMeet** is an AI-powered social & activity platform that helps users break out of screen time and get active in their local communities[cite: 3]. Whether you're looking for a running partner, a local pickup game, or city-wide outdoor events, GreetMeet uses conversational AI agents and smart geolocation to connect you with the right people and activities nearby[cite: 3].
+The demo uses fictional San Francisco/Oakland and Foothill communities data. Search, filters, map/list view, mode switching, RSVPs, ride interest/offers, friend requests, accepted-friend DMs, notifications, and the community guide all run in local React state. Refreshing resets the sample interactions.
 
-### ✨ Key Features
+The guide is a local simulation. Its original helper-robot/dumpling character is a static image, and its voice control simulates listening without requesting microphone access. No external AI, live event search, push notification, or authentication service is connected.
 
-* 🗣️ **Conversational AI Agent:** Ask our AI assistant natural questions like *"What outdoor activities are happening near me today?"* to discover local events on the fly[cite: 3].
-* 🎯 **Personalized Interest Onboarding:** Sign up and select your specific fitness & recreational interests (e.g., sports, biking, running, hiking)[cite: 3].
-* 👥 **Local Activity Matching:** Discover and connect with nearby individuals who share similar fitness goals and hobbies[cite: 3].
-* 🔔 **Smart Event Notifications:** Get real-time alerts for local meetups and outdoor activities based on your location and preferences[cite: 3].
-* 🗺️ **Interactive Map View:** Browse a visual map populated with local fitness meetups and city-wide outdoor activities[cite: 3].
-* 🎙️ **Voice Chat Integration:** Speak directly to the AI agent using high-quality natural voice synthesis powered by ElevenLabs.
+## Supabase foundation
 
----
+The repo contains a Supabase CLI config, an initial migration, typed `supabase-js` client scaffolding, and `.env.example`. The browser demo does not need project credentials. To prepare a local environment later, copy `.env.example` to `.env.local` and fill in a project URL and publishable key. Never put a secret/service-role key in a browser environment variable.
 
-## 🛠️ Tech Stack
+The migration adds profiles, public events, RSVPs, friendships, messages, ride posts, and notifications. RLS is enabled on every table. Anonymous access is not granted; authenticated access is limited by ownership, public-event context, or friendship participation. Message policies require an accepted friendship. Profile and ride-location fields store only broad region or pickup-area labels, not home addresses or precise member coordinates. The local Supabase config sets `auto_expose_new_tables = false`.
 
-* **Frontend:** Next.js / React, Tailwind CSS, Lucide Icons
-* **Database & Auth:** Supabase (User accounts, profiles, interest tags)[cite: 3]
-* **Hosting & Deployment:** Deployxa / Vercel
-* **AI & Search Engine:** Gemma LLM / Featherless.ai open-source models for event recommendations & agent interactions[cite: 1, 3]
-* **Voice Generation:** ElevenLabs API for conversational voice responses[cite: 1, 3]
+No Supabase project was linked and no migration was applied remotely. Authentication, hosted project connection, event search, AI, push notifications, and the app's data mutations remain for the team to iterate on. Add any future Data API grant together with its matching RLS policies after the team settles the product access model.
 
----
+## Design references
 
-## 🚀 Getting Started Locally
-
-### Prerequisites
-
-* Node.js 18+ and `npm` or `pnpm` installed.
-* Supabase project credentials.
-* API Keys for **Featherless.ai** and **ElevenLabs**.
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone [https://github.com/your-username/greetmeet.git](https://github.com/your-username/greetmeet.git)
-   cd greetmeet
+- Approved concept: [`design/greet-meet-approved-board.png`](design/greet-meet-approved-board.png)
+- Design tokens and responsive structure: [`design/design-system.md`](design/design-system.md)
+- Community guide character: [`public/images/leaf-guide.png`](public/images/leaf-guide.png)
