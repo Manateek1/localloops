@@ -1,72 +1,36 @@
-import { useState, type FormEvent } from 'react'
-import { ArrowLeft, Send, ShieldCheck } from 'lucide-react'
-import type { DemoPerson } from '../data/demo'
-import { inboxThreads } from '../data/demo'
-import type { FriendStatus } from './PeoplePage'
-import { Avatar } from '../components/Avatar'
-
-export type ChatMessage = { sender: 'you' | 'them'; text: string; time: string }
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { ArrowLeft, Send } from 'lucide-react'
+import type { MessageRow } from '../lib/supabase/database.types'
 
 type MessagesPageProps = {
-  person: DemoPerson | undefined
-  friendStatus: FriendStatus
-  messages: ChatMessage[]
-  onSend: (text: string) => void
+  name: string
+  userId: string
+  messages: MessageRow[]
+  sending: boolean
   onBack: () => void
+  onSend: (text: string) => Promise<boolean>
 }
 
-export function MessagesPage({ person, friendStatus, messages, onSend, onBack }: MessagesPageProps) {
-  const [draft, setDraft] = useState('')
-  const fallback = inboxThreads.find((thread) => thread.id === person?.id)
-  const displayPerson = person ?? (fallback ? {
-    id: fallback.id,
-    name: fallback.name,
-    initials: fallback.initials,
-    color: fallback.color,
-    town: 'Nearby',
-    travel: '',
-    interests: [],
-    sharedEventId: '',
-    bio: '',
-  } : undefined)
+export function MessagesPage({ name, userId, messages, sending, onBack, onSend }: MessagesPageProps) {
+  const [text, setText] = useState('')
+  const bottomRef = useRef<HTMLDivElement>(null)
+  useEffect(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), [messages])
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const message = draft.trim()
-    if (!message) return
-    onSend(message)
-    setDraft('')
-  }
-
-  if (!displayPerson || friendStatus !== 'accepted') {
-    return (
-      <div className="page-content message-locked">
-        <button className="back-link" type="button" onClick={onBack}><ArrowLeft size={17} /> Back to Inbox</button>
-        <div className="locked-message-card"><ShieldCheck size={28} /><h1>Connect before messaging</h1><p>Direct messages open after a friend request is accepted.</p><button className="button button--primary" type="button" onClick={onBack}>Return to Inbox</button></div>
-      </div>
-    )
+    const clean = text.trim()
+    if (!clean || sending) return
+    if (await onSend(clean)) setText('')
   }
 
   return (
-    <div className="page-content messages-page">
-      <button className="back-link" type="button" onClick={onBack}><ArrowLeft size={17} /> Back to Inbox</button>
-      <section className="chat-panel">
-        <header className="chat-header"><Avatar initials={displayPerson.initials} color={displayPerson.color} size="large" /><span><strong>{displayPerson.name}</strong><small>{displayPerson.town} · Friend</small></span><span className="chat-secure"><ShieldCheck size={15} /> Friends only</span></header>
-        <div className="chat-history" aria-live="polite">
-          <div className="chat-day-divider"><span>Today</span></div>
-          {messages.map((message, index) => (
-            <div className={`chat-message ${message.sender === 'you' ? 'chat-message--you' : ''}`} key={`${message.time}-${index}`}>
-              {message.sender === 'them' && <Avatar initials={displayPerson.initials} color={displayPerson.color} size="small" />}
-              <div className="chat-message__body"><p>{message.text}</p><small>{message.time}</small></div>
-            </div>
-          ))}
-        </div>
-        <form className="chat-compose" onSubmit={handleSubmit}>
-          <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={`Say hello to ${displayPerson.name.split(' ')[0]}…`} aria-label="Message" />
-          <button className="send-button" type="submit" aria-label="Send message" disabled={!draft.trim()}><Send size={18} /></button>
-        </form>
-        <p className="chat-footer-note"><ShieldCheck size={14} /> You’re connected. Keep it kind and meet in public places.</p>
-      </section>
+    <div className="greet-message-page">
+      <header className="greet-message-header"><button className="greet-back-button" type="button" onClick={onBack}><ArrowLeft size={17} /> Inbox</button><div><span className="greet-member-avatar greet-member-avatar--initials" aria-hidden="true">{name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'N'}</span><strong>{name}</strong></div></header>
+      <div className="greet-message-list" aria-live="polite">
+        {messages.length ? messages.map((message) => <article key={message.id} className={`greet-message-bubble ${message.sender_id === userId ? 'is-mine' : ''}`}><p>{message.body}</p><time>{new Date(message.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</time></article>) : <div className="greet-empty-inbox"><span className="greet-member-avatar greet-member-avatar--initials" aria-hidden="true">{name[0]}</span><h2>Start with a simple hello.</h2><p>Your messages are private to this accepted connection.</p></div>}
+        <div ref={bottomRef} />
+      </div>
+      <form className="greet-message-compose" onSubmit={submit}><label className="sr-only" htmlFor="message-text">Write a message</label><textarea id="message-text" rows={2} maxLength={2000} value={text} onChange={(event) => setText(event.target.value)} placeholder={`Write ${name} a message…`} /><button className="greet-button greet-button--primary" type="submit" disabled={sending || !text.trim()}><Send size={16} />{sending ? 'Sending…' : 'Send'}</button></form>
     </div>
   )
 }

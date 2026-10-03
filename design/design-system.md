@@ -1,6 +1,6 @@
-# Greet Meet visual system
+# GreetMe visual system
 
-The approved board is the visual source for the mobile-first prototype. The UI uses a warm paper surface, deep forest green for primary actions, softened sage for community and map surfaces, and a small sun-coral accent. The system favors friendly editorial type, rounded but quiet controls, clear event photography, and open spacing.
+GreetMe uses a warm paper surface, deep forest green for primary actions, softened sage for community and map surfaces, and a small sun-coral accent. The system favors friendly editorial type, rounded but quiet controls, clear event photography, and open spacing.
 
 ## Tokens
 
@@ -18,11 +18,10 @@ The approved board is the visual source for the mobile-first prototype. The UI u
 
 ## Primary surfaces
 
-- Onboarding: centered welcome, selectable interest tiles, City/Rural choice, one forest CTA, and an outdoors photo edge.
-- Explore: Map/List toggle, region mode switch, search/filters, rural source context, and a short event list. The rural map is a locally drawn fictional illustration with town labels and travel times.
-- Event detail: full-width event image, date/place/attending context, public-event ride coordination, RSVP, and host row.
-- People and Inbox: compact profile/message rows with shared-interest/event context, request actions, and notification categories.
-- AI guide: supplied leaf character is the focal point; text and simulated voice controls remain secondary.
+- Explore: Map/List toggle, location search for U.S. towns and ZIP codes, event filters, an OpenStreetMap-based map, and nearby listings from configured public sources.
+- Event detail: event image when supplied by the source, date and public place, RSVP, and broad-area ride coordination.
+- Community and Inbox: member profiles, connection requests, and messaging backed by Supabase; profiles stay private until a member opts into discovery.
+- GreetMe guide: the friendly sprout character anchors the visual identity. AI responses and voice are not enabled yet.
 
 ## Responsive behavior
 

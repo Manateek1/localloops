@@ -1,30 +1,58 @@
-# Greet Meet
+# GreetMe
 
-Created for Dublin Hacx, Greet Meet explores how shared interests can lead to local events, new connections, and active plans. This mobile-first prototype includes an urban city experience and a rural mode connecting nearby towns, local calendars, libraries, Parks & Rec, and public-event ride coordination.
+GreetMe helps people find public events and neighbors in their area, including rural communities where nearby plans may be spread across several towns. The app searches real listings from Ticketmaster and the National Park Service, shows public gatherings created by GreetMe members, and never fills gaps with sample people or invented events.
 
-For the team's plain-language feature request and review process, see [CONTRIBUTING.md](CONTRIBUTING.md).
+Location search accepts a U.S. ZIP code or a town and state, and uses an approximate postal-place center. The map uses OpenFreeMap tiles based on OpenStreetMap data. Search works in all 50 states; listing coverage depends on the event providers and gatherings members publish.
 
-## Run the prototype
+## Run locally
+
+Use a Node.js version supported by Vite 8, then install dependencies and create a local environment file:
 
 ```sh
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
-The demo uses fictional San Francisco/Oakland and Foothill communities data. Search, filters, map/list view, mode switching, RSVPs, ride interest/offers, friend requests, accepted-friend DMs, notifications, and the community guide all run in local React state. Refreshing resets the sample interactions.
+The Vite development server also runs the `/api/geocode` and `/api/events` handlers locally. ZIP and town search works without an API key. Without event-provider keys, GreetMe shows a clear empty state and does not invent listings. Sign-in, member profiles, community gatherings, RSVPs, ride coordination, connection requests, and messages need a separately configured GreetMe Supabase project.
 
-The guide is a local simulation. Its original helper-robot/dumpling character is a static image, and its voice control simulates listening without requesting microphone access. No external AI, live event search, push notification, or authentication service is connected.
+## Configure Supabase
 
-## Supabase foundation
+Create a new project for GreetMe. Do not point this app at a database used by another product. Copy its project URL and publishable key into `.env.local`:
 
-The repo contains a Supabase CLI config, an initial migration, typed `supabase-js` client scaffolding, and `.env.example`. The browser demo does not need project credentials. To prepare a local environment later, copy `.env.example` to `.env.local` and fill in a project URL and publishable key. Never put a secret/service-role key in a browser environment variable.
+```dotenv
+VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+```
 
-The migration adds profiles, public events, RSVPs, friendships, messages, ride posts, and notifications. RLS is enabled on every table. Anonymous access is not granted; authenticated access is limited by ownership, public-event context, or friendship participation. Message policies require an accepted friendship. Profile and ride-location fields store only broad region or pickup-area labels, not home addresses or precise member coordinates. The local Supabase config sets `auto_expose_new_tables = false`.
+Apply the checked-in migration using the Supabase CLI:
 
-No Supabase project was linked and no migration was applied remotely. Authentication, hosted project connection, event search, AI, push notifications, and the app's data mutations remain for the team to iterate on. Add any future Data API grant together with its matching RLS policies after the team settles the product access model.
+```sh
+supabase login
+supabase link --project-ref YOUR_PROJECT_REF
+supabase db push
+```
 
-## Design references
+The migration enables row-level security on every app table. Profiles are visible only to authenticated members who opted into discovery; direct messages require an accepted connection. Members can optionally add a broad town or region and state to be discoverable in that state. GreetMe stores public pickup-area labels, not home addresses or live member coordinates. Configure the Supabase Auth site URL and allowed redirect URLs for local development and each deployed app origin.
 
-- Approved concept: [`design/greet-meet-approved-board.png`](design/greet-meet-approved-board.png)
-- Design tokens and responsive structure: [`design/design-system.md`](design/design-system.md)
-- Community guide character: [`public/images/leaf-guide.png`](public/images/leaf-guide.png)
+## Connect real event sources
+
+Create API keys in the providers' developer portals and add them only as server environment variables:
+
+```dotenv
+TICKETMASTER_API_KEY=...
+NPS_API_KEY=...
+```
+
+- [Ticketmaster Discovery API](https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/) returns organizer listings around the searched coordinates.
+- [National Park Service API](https://www.nps.gov/subjects/developer/api-documentation.htm) contributes dated NPS events with published coordinates.
+
+In Vercel, set these as server-side environment variables. Never prefix them with `VITE_`; the browser calls GreetMe's `/api/events` function and does not receive either key. The map and place search need no key. Each event card names its source and links back to the original listing. Provider coverage is not a complete catalog of every county fair, library program, or small-town event, so GreetMe also lets signed-in members publish real public gatherings.
+
+## Deploy to Vercel
+
+Import this repository into Vercel with the Vite framework preset. Add the Supabase URL and publishable key as `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, then add the event-provider keys above as server-only variables. Apply the Supabase migration and set Auth redirect URLs before inviting members. Vercel builds the Vite app and deploys the `api/` handlers as serverless functions.
+
+## Scope
+
+GreetMe has email/password sign-in, profiles, opt-in member discovery, connection requests, accepted-connection messages, public community events, event RSVPs, and public-place ride coordination. The large sprout character is the friendly product guide; AI, Gemma, and ElevenLabs are intentionally not connected yet.

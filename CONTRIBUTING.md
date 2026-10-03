@@ -1,4 +1,4 @@
-# Contributing to Greet Meet
+# Contributing to GreetMe
 
 You do not need to know how to code to suggest an improvement. The team uses a simple path so changes can be tried and reviewed before they reach `main`:
 
@@ -6,7 +6,7 @@ You do not need to know how to code to suggest an improvement. The team uses a s
 
 ## Request a feature
 
-1. Open the Greet Meet repository on GitHub and select **Issues → New issue → Feature request**.
+1. Open the GreetMe repository on GitHub and select **Issues → New issue → Feature request**.
 2. Describe the problem in everyday language. Say who it affects, what a better result would look like, and give one or two examples of how you would use it. Add a screenshot if one helps.
 3. Submit the issue. A teammate can clarify the request before implementation starts.
 
