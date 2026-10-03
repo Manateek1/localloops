@@ -49,10 +49,16 @@ NPS_API_KEY=...
 
 In Vercel, set these as server-side environment variables. Never prefix them with `VITE_`; the browser calls GreetMe's `/api/events` function and does not receive either key. The map and place search need no key. Each event card names its source and links back to the original listing. Provider coverage is not a complete catalog of every county fair, library program, or small-town event, so GreetMe also lets signed-in members publish real public gatherings.
 
+## Connect the voice guide
+
+Create or choose an ElevenLabs Conversational AI agent, then set its ID as `ELEVENLABS_AGENT_ID` and a server-side API key as `ELEVENLABS_API_KEY`. Keep the key out of every `VITE_` variable. GreetMe's `POST /api/voice-token` endpoint checks the caller's Supabase session before asking ElevenLabs for a short-lived WebRTC conversation token; the browser never receives the API key. The endpoint also needs the Supabase URL and publishable key set for the app.
+
+The guide starts only after a signed-in member taps **Talk with your guide**. The browser then requests microphone permission and the SDK connects the live session. Use the deployed HTTPS URL or `localhost`; if the mic is blocked, allow it in the browser's site settings. The guide shows a setup message until the ElevenLabs key and agent ID have been added to the Vercel project and the deployment rebuilt.
+
 ## Deploy to Vercel
 
 Import this repository into Vercel with the Vite framework preset. Add the Supabase URL and publishable key as `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, then add the event-provider keys above as server-only variables. Apply the Supabase migration and set Auth redirect URLs before inviting members. Vercel builds the Vite app and deploys the `api/` handlers as serverless functions.
 
 ## Scope
 
-GreetMe has email/password sign-in, profiles, opt-in member discovery, connection requests, accepted-connection messages, public community events, event RSVPs, and public-place ride coordination. The large sprout character is the friendly product guide; AI, Gemma, and ElevenLabs are intentionally not connected yet.
+GreetMe has email/password sign-in, profiles, opt-in member discovery, connection requests, accepted-connection messages, public community events, event RSVPs, and public-place ride coordination. The large sprout character is the friendly product guide. The voice interface is wired to ElevenLabs but needs an agent ID and server API key in deployment settings before a live conversation can start; Gemma and AI answers grounded in live GreetMe data are not connected.

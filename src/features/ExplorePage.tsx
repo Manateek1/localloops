@@ -3,6 +3,7 @@ import { CalendarDays, Compass, List, Map, MapPin, Plus, Search, Trees } from 'l
 import type { CommunityEvent, LocationResult } from '../data/models'
 import type { EventFeedState } from '../lib/events'
 import { EventCard } from '../components/EventCard'
+import { VoiceGuide } from './VoiceGuide'
 
 const MapCanvas = lazy(() => import('../components/MapCanvas').then((module) => ({ default: module.MapCanvas })))
 
@@ -112,11 +113,7 @@ export function ExplorePage({
         )}
       </section>
 
-      <aside className="greet-guide-card" aria-label="GreetMe guide">
-        <div className="greet-guide-card__copy"><span className="greet-guide-card__kicker"><Trees size={15} />Your GreetMe guide</span><h2>A friendly face for finding your people.</h2><p>The guide’s AI is still taking shape. Nearby events, maps, RSVPs, and neighbor gatherings are built on real listings and real member accounts.</p></div>
-        <img src="/images/greetme-sprout.png" alt="A small smiling sprout character with open arms" />
-        <span className="greet-guide-card__sparkle" aria-hidden="true">✦</span>
-      </aside>
+      <VoiceGuide signedIn={canCreateEvent} onSignIn={onSignIn} />
       <p className="greet-privacy-note"><MapPin size={14} />Location searches use town or ZIP centers. GreetMe does not save your precise location.</p>
     </div>
   )

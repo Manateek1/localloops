@@ -145,12 +145,18 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-empty-events strong { color: var(--ink); font-size: 13px; }
 .greet-empty-events > span:last-child { max-width: 330px; color: var(--muted); font-size: 11px; line-height: 1.55; }
 .greet-loading { display: flex; align-items: center; justify-content: center; min-height: 140px; color: #65766a; font-size: 12px; }
-.greet-guide-card { min-height: 266px; position: relative; overflow: hidden; display: flex; align-items: center; margin-top: 22px; padding: 26px 31px; border: 1px solid #dfe7d9; border-radius: 23px; background: radial-gradient(circle at 86% 50%, #e4eddf 0 19%, transparent 19.5%), linear-gradient(112deg,#edf2e9,#f6f0df); }
-.greet-guide-card__copy { width: min(57%, 565px); position: relative; z-index: 2; }
+.greet-guide-card { min-height: 300px; position: relative; overflow: hidden; display: flex; align-items: center; margin-top: 22px; padding: 26px 31px; border: 1px solid #dfe7d9; border-radius: 23px; background: radial-gradient(circle at 86% 50%, #e4eddf 0 19%, transparent 19.5%), linear-gradient(112deg,#edf2e9,#f6f0df); }
+.greet-guide-card__copy { width: min(61%, 590px); position: relative; z-index: 2; }
 .greet-guide-card__kicker { display: inline-flex; align-items: center; gap: 7px; color: var(--forest); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .greet-guide-card__kicker svg { color: #d9915d; }
 .greet-guide-card h2 { max-width: 470px; margin: 11px 0 9px; color: #1d382a; font-size: clamp(22px, 2.6vw, 31px); line-height: 1.12; }
 .greet-guide-card p { max-width: 470px; margin: 0; color: #637065; font-size: 12px; line-height: 1.65; }
+.greet-guide-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.greet-guide-controls .greet-button { min-height: 40px; }
+.greet-guide-controls .greet-button--quiet { border: 1px solid #d9e2d6; color: #395542; background: rgba(255,254,250,.82); }
+.greet-guide-controls .greet-button--quiet:hover { background: #fffefa; }
+.greet-guide-status { min-height: 17px; margin-top: 9px !important; color: #53685a !important; font-size: 10px !important; }
+.greet-guide-status:empty { display: none; }
 .greet-guide-card img { width: min(39%, 300px); max-height: 275px; position: absolute; right: 9%; bottom: -13px; object-fit: contain; filter: drop-shadow(0 12px 15px rgba(60,70,48,.15)); }
 .greet-guide-card__sparkle { position: absolute; right: 9%; top: 28px; color: #e89d5e; font-size: 30px; }
 .greet-privacy-note { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 14px 0 0; color: #788179; font-size: 10px; line-height: 1.5; text-align: center; }
@@ -370,8 +376,8 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
   .greet-event-card__title { font-size: 12px; }
   .greet-event-card__meta { font-size: 9px; }
   .greet-event-card__footer { margin-top: 7px; padding-top: 6px; }
-  .greet-guide-card { min-height: 235px; padding: 22px 21px; border-radius: 19px; }
-  .greet-guide-card__copy { width: 61%; }
+  .greet-guide-card { min-height: 270px; padding: 22px 21px; border-radius: 19px; }
+  .greet-guide-card__copy { width: 66%; }
   .greet-guide-card h2 { font-size: 23px; }
   .greet-guide-card p { font-size: 10px; line-height: 1.55; }
   .greet-guide-card img { width: 39%; right: 3%; bottom: -8px; }
@@ -476,12 +482,15 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
   .greet-event-card__meta { font-size: 8px; }
   .greet-event-card__source { left: 5px; bottom: 5px; padding: 4px 5px; font-size: 7px; }
   .greet-event-card__footer { gap: 5px; font-size: 8px; }
-  .greet-guide-card { min-height: 205px; padding: 17px 14px; }
-  .greet-guide-card__copy { width: 64%; }
+  .greet-guide-card { min-height: 255px; padding: 17px 14px; }
+  .greet-guide-card__copy { width: 72%; }
   .greet-guide-card__kicker { font-size: 8px; }
-  .greet-guide-card h2 { margin-top: 8px; font-size: 19px; }
-  .greet-guide-card p { font-size: 8px; }
-  .greet-guide-card img { width: 41%; right: 0; }
+  .greet-guide-card h2 { max-width: 310px; margin-top: 8px; font-size: 19px; }
+  .greet-guide-card p { max-width: 310px; font-size: 9px; }
+  .greet-guide-controls { margin-top: 12px; }
+  .greet-guide-controls .greet-button { min-height: 36px; font-size: 10px; }
+  .greet-guide-status { font-size: 8px !important; }
+  .greet-guide-card img { width: 31%; right: 0; opacity: .85; }
   .greet-guide-card__sparkle { top: 12px; right: 4%; font-size: 17px; }
   .greet-event-grid { grid-template-columns: 1fr; }
   .greet-member-action .greet-button { min-width: 93px; padding: 0 9px; }
