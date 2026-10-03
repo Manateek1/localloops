@@ -14,6 +14,7 @@ import { searchLocation } from './lib/location'
 import type { CommunityEvent, EventSource, LocationResult, Profile } from './data/models'
 import type { FriendshipRow, MessageRow, ProfileRow } from './lib/supabase/database.types'
 import { supabaseClient } from './lib/supabase/client'
+import { TranslationNotice } from './features/LanguageProvider'
 
 const noSources: EventFeedState = { ticketmaster: 'not_configured', nps: 'not_configured' }
 
@@ -400,6 +401,7 @@ function App() {
   return (
     <div className="greet-app-shell">
       {!isMessagePage && <Header page={page} userName={userName} onNavigate={navigate} onSignIn={openSignIn} onSignOut={() => void signOut()} />}
+      <TranslationNotice />
       <main className={'greet-app-main greet-app-main--' + page}>
         {page === 'explore' && <ExplorePage
           location={location}

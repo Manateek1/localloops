@@ -2,6 +2,8 @@ import { useCallback, useState } from 'react'
 import { ConversationProvider, useConversation } from '@elevenlabs/react'
 import { AudioLines, Mic, MicOff, Sparkles, Trees } from 'lucide-react'
 import { supabaseClient } from '../lib/supabase/client'
+import { agentLanguageCode } from '../lib/languages'
+import { useLanguage } from './LanguageProvider'
 
 type VoiceGuideProps = {
   signedIn: boolean
@@ -31,6 +33,10 @@ function explainVoiceError(error: unknown) {
 function VoiceGuideControls({ signedIn, onSignIn }: VoiceGuideProps) {
   const [error, setError] = useState('')
   const [starting, setStarting] = useState(false)
+  const [sessionLanguage, setSessionLanguage] = useState<string | null>(null)
+  const { language, languages } = useLanguage()
+  const voiceLanguage = agentLanguageCode(language)
+  const languageName = (code: string) => languages.find((item) => item.code === code)?.name ?? code
   const handleVoiceError = useCallback((reason: unknown) => setError(explainVoiceError(reason)), [])
   const conversation = useConversation({ onError: handleVoiceError })
 
@@ -42,6 +48,7 @@ function VoiceGuideControls({ signedIn, onSignIn }: VoiceGuideProps) {
     }
     if (conversation.status === 'connected') {
       await conversation.endSession()
+      setSessionLanguage(null)
       return
     }
     if (starting || conversation.status === 'connecting') return
@@ -75,7 +82,11 @@ function VoiceGuideControls({ signedIn, onSignIn }: VoiceGuideProps) {
         setError('The voice guide returned an invalid session. Please try again.')
         return
       }
-      await conversation.startSession({ conversationToken: payload.token })
+      await conversation.startSession({
+        conversationToken: payload.token,
+        ...(voiceLanguage ? { overrides: { agent: { language: voiceLanguage } } } : {}),
+      })
+      setSessionLanguage(language)
     } catch (reason) {
       setError(explainVoiceError(reason))
     } finally {
@@ -85,6 +96,11 @@ function VoiceGuideControls({ signedIn, onSignIn }: VoiceGuideProps) {
 
   const active = conversation.status === 'connected'
   const busy = starting || conversation.status === 'connecting'
+  const languageNotice = active && sessionLanguage && sessionLanguage !== language
+    ? `This chat is using ${languageName(sessionLanguage)}. End it and start again to switch to ${languageName(language)}.`
+    : !voiceLanguage
+      ? `ElevenLabs does not support ${languageName(language)} in this voice session, so the guide will use its configured language.`
+      : `The guide will use ${languageName(language)} when that language is enabled on your ElevenLabs agent. Changes apply to the next chat.`
   const statusText = active
     ? conversation.isSpeaking ? 'Your guide is speaking…' : conversation.isListening ? 'Listening — go ahead.' : 'You’re connected to your guide.'
     : busy ? 'Connecting…' : signedIn ? 'Your mic turns on only when you start.' : 'Sign in to have a voice chat.'
@@ -95,6 +111,7 @@ function VoiceGuideControls({ signedIn, onSignIn }: VoiceGuideProps) {
         <span className="greet-guide-card__kicker"><Trees size={15} />Your GreetMe guide</span>
         <h2>A friendly face for finding your people.</h2>
         <p>Ask out loud about local plans and getting connected. Your microphone is used only during a voice chat.</p>
+        <p className="greet-guide-language-note">{languageNotice}</p>
         <div className="greet-guide-controls">
           <button className="greet-button greet-button--primary" type="button" onClick={() => void startOrEnd()} disabled={busy} aria-pressed={active}>
             {active ? <><AudioLines size={16} />End voice chat</> : <><Mic size={16} />{busy ? 'Connecting…' : signedIn ? 'Talk with your guide' : 'Sign in to talk'}</>}

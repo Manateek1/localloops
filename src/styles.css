@@ -38,6 +38,11 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-nav__item:hover { color: var(--forest); background: #eef1e9; }
 .greet-nav__item.is-active { color: var(--forest); background: #e9eee5; font-weight: 750; }
 .greet-header__actions { display: flex; align-items: center; justify-content: flex-end; gap: 13px; min-width: 170px; }
+.greet-language-picker { min-width: 0; display: inline-flex; align-items: center; gap: 7px; padding: 0 9px; border: 1px solid #e1e6dc; border-radius: 11px; color: var(--forest); background: #fffefa; }
+.greet-language-picker svg { flex: 0 0 auto; }
+.greet-language-picker select { width: auto; max-width: 142px; min-width: 0; height: 36px; padding: 0 13px 0 0; border: 0; outline: 0; color: #42594a; background: transparent; font-size: 11px; cursor: pointer; text-overflow: ellipsis; }
+.greet-language-picker select:focus-visible { outline: 2px solid rgba(20, 115, 81, .35); outline-offset: 2px; }
+.greet-translation-notice { width: min(calc(100% - 50px), 1316px); margin: 10px auto 0; padding: 9px 13px; border: 1px solid #dce7d8; border-radius: 11px; color: #526454; background: #eef3e9; font-size: 11px; line-height: 1.45; }
 .greet-account-link { display: inline-flex; align-items: center; gap: 8px; padding: 8px 11px; border: 1px solid transparent; border-radius: 12px; color: #53635a; background: transparent; cursor: pointer; font-size: 13px; font-weight: 650; }
 .greet-account-link:hover, .greet-account-link.is-active { border-color: #e1e7dd; background: #f1f5ee; color: var(--forest); }
 .greet-signin { min-height: 40px; padding: 0 18px; border: 1px solid var(--forest); border-radius: 12px; background: var(--forest); color: white; font-size: 12px; font-weight: 750; cursor: pointer; }
@@ -151,6 +156,7 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-guide-card__kicker svg { color: #d9915d; }
 .greet-guide-card h2 { max-width: 470px; margin: 11px 0 9px; color: #1d382a; font-size: clamp(22px, 2.6vw, 31px); line-height: 1.12; }
 .greet-guide-card p { max-width: 470px; margin: 0; color: #637065; font-size: 12px; line-height: 1.65; }
+.greet-guide-card .greet-guide-language-note { max-width: 430px; margin: 8px 0 0; color: #6a776d; font-size: 10px; line-height: 1.45; }
 .greet-guide-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .greet-guide-controls .greet-button { min-height: 40px; }
 .greet-guide-controls .greet-button--quiet { border: 1px solid #d9e2d6; color: #395542; background: rgba(255,254,250,.82); }
@@ -213,6 +219,7 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-message-page { width: min(100% - 72px, 940px); min-height: 100vh; margin: 0 auto; display: flex; flex-direction: column; padding: 20px 0 24px; }
 .greet-message-header { min-height: 64px; display: flex; align-items: center; gap: 20px; padding: 0 0 13px; border-bottom: 1px solid var(--border); }
 .greet-message-header > div { display: inline-flex; align-items: center; gap: 10px; color: #293b30; font-size: 13px; }
+.greet-message-header .greet-language-picker { margin-left: auto; }
 .greet-back-button { display: inline-flex; align-items: center; gap: 7px; min-height: 35px; padding: 0 4px; border: 0; background: transparent; color: var(--forest); font-size: 11px; font-weight: 750; cursor: pointer; }
 .greet-message-list { flex: 1; min-height: 52vh; display: flex; flex-direction: column; align-items: flex-start; gap: 11px; overflow: auto; padding: 23px 2px; }
 .greet-message-bubble { max-width: min(76%, 560px); padding: 11px 14px; border: 1px solid #e4e7de; border-radius: 4px 16px 16px; background: var(--surface); box-shadow: 0 4px 12px rgba(32,53,42,.035); }
@@ -342,9 +349,9 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
   .greet-event-detail__grid { grid-template-columns: minmax(0,1.3fr) minmax(250px,.75fr); gap: 20px; }
 }
 @media (max-width: 780px) {
-  .greet-header { height: 65px; padding: 0 18px; }
+  .greet-header { height: 65px; gap: 10px; padding: 0 18px; }
   .greet-nav { display: none; }
-  .greet-header__actions { min-width: auto; }
+  .greet-header__actions { min-width: auto; gap: 8px; }
   .greet-signout { display: none; }
   .greet-account-link span { max-width: 122px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .greet-page { width: calc(100% - 34px); padding: 30px 0 35px; }
@@ -453,10 +460,17 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
   .greet-toast { right: 12px; bottom: 76px; font-size: 10px; }
 }
 @media (max-width: 480px) {
-  .greet-header { padding: 0 13px; }
-  .brand { gap: 7px; font-size: 20px; }
+  .greet-header { gap: 6px; padding: 0 13px; }
+  .brand { gap: 6px; font-size: 19px; }
   .brand__sprout { width: 31px; height: 31px; font-size: 19px; }
-  .greet-signin { min-height: 36px; padding: 0 13px; font-size: 10px; }
+  .greet-header__actions { gap: 6px; }
+  .greet-account-link { padding: 7px 5px; }
+  .greet-account-link span { display: none; }
+  .greet-language-picker { gap: 5px; padding: 0 6px; }
+  .greet-language-picker svg { width: 14px; height: 14px; }
+  .greet-language-picker select { max-width: 65px; height: 34px; font-size: 10px; }
+  .greet-signin { min-height: 36px; padding: 0 9px; font-size: 9px; }
+  .greet-translation-notice { width: calc(100% - 26px); margin-top: 7px; padding: 8px 10px; font-size: 9px; }
   .greet-page { width: calc(100% - 26px); }
   .greet-explore-heading h1 { font-size: 29px; }
   .greet-explore-heading > div > p:last-child { font-size: 11px; }

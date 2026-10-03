@@ -44,7 +44,7 @@ export function InboxPage({ userId, friendships, messages, profilesById, loading
             conversations.length ? <div className="greet-conversation-list">{conversations.map(({ friendship, name, latest }) => (
               <button className="greet-conversation" type="button" key={friendship.id} onClick={() => onOpenMessage(friendship.id)}>
                 <span className="greet-member-avatar greet-member-avatar--initials" aria-hidden="true">{name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'N'}</span>
-                <span className="greet-conversation__body"><strong>{name}</strong><small>{latest ? `${latest.sender_id === userId ? 'You: ' : ''}${latest.body}` : 'Your conversation is ready when you are.'}</small></span>
+                <span className="greet-conversation__body"><strong translate="no">{name}</strong><small translate={latest ? 'no' : undefined}>{latest ? `${latest.sender_id === userId ? 'You: ' : ''}${latest.body}` : 'Your conversation is ready when you are.'}</small></span>
                 <span className="greet-conversation__meta">{latest ? new Date(latest.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Say hello'}<ArrowUpRight size={16} /></span>
               </button>
             ))}</div> : <div className="greet-empty-inbox"><MessageCircle size={25} /><h2>No messages yet.</h2><p>When you accept a connection, you can send a private message here.</p></div>
@@ -52,11 +52,11 @@ export function InboxPage({ userId, friendships, messages, profilesById, loading
             <div className="greet-request-list">
               {incoming.map((friendship) => {
                 const name = profilesById.get(friendship.requester_id)?.display_name ?? 'GreetMe neighbor'
-                return <article className="greet-request" key={friendship.id}><span className="greet-member-avatar greet-member-avatar--initials"><UserRound size={18} /></span><div><strong>{name}</strong><small>Would like to connect with you.</small></div><div className="greet-request__actions"><button className="greet-button greet-button--soft" type="button" onClick={() => onAccept(friendship.id)}><Check size={14} />Accept</button><button className="greet-button greet-button--quiet" type="button" onClick={() => onDismiss(friendship.id)}>Dismiss</button></div></article>
+                return <article className="greet-request" key={friendship.id}><span className="greet-member-avatar greet-member-avatar--initials"><UserRound size={18} /></span><div><strong translate="no">{name}</strong><small>Would like to connect with you.</small></div><div className="greet-request__actions"><button className="greet-button greet-button--soft" type="button" onClick={() => onAccept(friendship.id)}><Check size={14} />Accept</button><button className="greet-button greet-button--quiet" type="button" onClick={() => onDismiss(friendship.id)}>Dismiss</button></div></article>
               })}
               {outgoing.map((friendship) => {
                 const name = profilesById.get(friendship.addressee_id)?.display_name ?? 'GreetMe neighbor'
-                return <article className="greet-request" key={friendship.id}><span className="greet-member-avatar greet-member-avatar--initials"><UserRound size={18} /></span><div><strong>{name}</strong><small>Your request is waiting for a reply.</small></div></article>
+                return <article className="greet-request" key={friendship.id}><span className="greet-member-avatar greet-member-avatar--initials"><UserRound size={18} /></span><div><strong translate="no">{name}</strong><small>Your request is waiting for a reply.</small></div></article>
               })}
               {!incoming.length && !outgoing.length && <div className="greet-empty-inbox"><UserRound size={25} /><h2>No connection requests.</h2><p>When someone says hello, it will appear here.</p></div>}
             </div>

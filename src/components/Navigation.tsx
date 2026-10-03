@@ -1,5 +1,6 @@
 import { Compass, MessageCircle, UserRound, Users } from 'lucide-react'
 import { Brand } from './Brand'
+import { LanguagePicker } from '../features/LanguageProvider'
 
 export type Page = 'explore' | 'community' | 'inbox' | 'account' | 'event' | 'messages'
 
@@ -36,9 +37,10 @@ export function Header({ page, userName, onNavigate, onSignIn, onSignOut }: Navi
         ))}
       </nav>
       <div className="greet-header__actions">
+        <LanguagePicker />
         {userName ? (
           <>
-            <button className={`greet-account-link ${activePage === 'account' ? 'is-active' : ''}`} type="button" onClick={() => onNavigate('account')}><UserRound size={16} /><span>{userName}</span></button>
+            <button className={`greet-account-link ${activePage === 'account' ? 'is-active' : ''}`} type="button" onClick={() => onNavigate('account')}><UserRound size={16} /><span translate="no">{userName}</span></button>
             <button className="greet-signout" type="button" onClick={onSignOut}>Sign out</button>
           </>
         ) : <button className="greet-signin" type="button" onClick={onSignIn}>Sign in</button>}

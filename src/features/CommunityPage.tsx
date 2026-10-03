@@ -55,10 +55,10 @@ export function CommunityPage({ profiles, friendships, userId, stateCode, loadin
                   ? <img className="greet-member-avatar" src={profile.avatar_url} alt="" referrerPolicy="no-referrer" />
                   : <span className="greet-member-avatar greet-member-avatar--initials" aria-hidden="true">{initials(profile.display_name)}</span>}
                 <div className="greet-member-card__body">
-                  <h2>{profile.display_name}</h2>
-                  {profile.home_region && <p className="greet-member-location"><MapPin size={13} />{profile.home_region}</p>}
-                  {profile.bio && <p className="greet-member-bio">{profile.bio}</p>}
-                  {profile.interests.length > 0 && <div className="greet-tag-list">{profile.interests.slice(0, 5).map((interest) => <span key={interest}>{interest}</span>)}</div>}
+                  <h2 translate="no">{profile.display_name}</h2>
+                  {profile.home_region && <p className="greet-member-location" translate="no"><MapPin size={13} />{profile.home_region}</p>}
+                  {profile.bio && <p className="greet-member-bio" translate="no">{profile.bio}</p>}
+                  {profile.interests.length > 0 && <div className="greet-tag-list" translate="no">{profile.interests.slice(0, 5).map((interest) => <span key={interest}>{interest}</span>)}</div>}
                 </div>
                 <div className="greet-member-action">
                   {accepted
