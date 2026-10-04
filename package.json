@@ -9,7 +9,6 @@
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
-    "@elevenlabs/react": "^1.16.0",
     "@supabase/supabase-js": "2.117.2",
     "lucide-react": "1.51.0",
     "maplibre-gl": "6.11.2",

@@ -14,7 +14,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The Vite development server also runs the `/api/geocode` and `/api/events` handlers locally. ZIP and town search works without an API key. Without event-provider keys, LocalLoops shows a clear empty state and does not invent listings. Sign-in, member profiles, community gatherings, RSVPs, ride coordination, connection requests, and messages need a separately configured LocalLoops Supabase project.
+The Vite development server also runs the `/api` handlers locally. ZIP and town search works without an API key. Without event-provider keys, LocalLoops shows a clear empty state and does not invent listings. Sign-in, member profiles, community gatherings, RSVPs, ride coordination, connection requests, and member messages need a separately configured LocalLoops Supabase project.
 
 ## Configure Supabase
 
@@ -49,13 +49,22 @@ NPS_API_KEY=...
 
 In Vercel, set these as server-side environment variables. Never prefix them with `VITE_`; the browser calls the `/api/events` function and does not receive either key. The map and place search need no key. Each event card names its source and links back to the original listing. Provider coverage is not a complete catalog of every county fair, library program, or small-town event, so LocalLoops also lets signed-in members publish real public gatherings.
 
-## Connect the voice guide
+## Voice guide
 
-Create or choose an ElevenLabs Conversational AI agent, then set its ID as `ELEVENLABS_AGENT_ID` and a server-side API key as `ELEVENLABS_API_KEY`. Keep the key out of every `VITE_` variable. The `POST /api/voice-token` endpoint checks the caller's Supabase session before asking ElevenLabs for a short-lived WebRTC conversation token; the browser never receives the API key. The endpoint also needs the Supabase URL and publishable key set for the app.
+The guide is voice-only: people tap **Talk to Leafy**, speak, and hear a spoken response. It does not render a text chat or transcript. The browser asks for microphone permission only after the button is tapped, records up to 15 seconds, and sends the recording to the server-side `/api/guide` handler. Use the deployed HTTPS URL or `localhost`; if the microphone is blocked, allow it in the browser's site settings.
 
-The guide starts only after a signed-in member taps **Talk with your guide**. The browser then requests microphone permission and the SDK connects the live session. Use the deployed HTTPS URL or `localhost`; if the mic is blocked, allow it in the browser's site settings. The guide shows a setup message until the ElevenLabs key and agent ID have been added to the Vercel project and the deployment rebuilt.
+Set these server-only environment variables in `.env.local` for local development and in Vercel for deployment. Never prefix either key with `VITE_`:
 
-The site language picker is shared with the voice guide. The guide receives the selected language when a new chat starts. Enable the **Language** override in the agent's Security settings, add the desired languages to the agent, and use its multilingual model. Changing the site language during a chat takes effect on the next chat. ElevenLabs supports fewer languages than Google Translation, so languages outside the voice SDK's supported set use the agent's configured language.
+```dotenv
+GEMINI_API_KEY=...
+ELEVENLABS_API_KEY=...
+```
+
+Create the Gemini key in Google AI Studio on the free tier, without linking billing. The guide uses `gemini-3.5-flash` to understand the recording and produce a short spoken answer. It receives the selected approximate area and up to eight public event listings; it does not receive member profiles or precise coordinates. The API request opts out of saving interaction records. Gemini's free tier has rate limits, and Google says free-tier prompts may be used to improve its products. If its free quota is unavailable or exhausted, the guide reports that and does not switch to a paid tier. See [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing) and [audio input formats](https://ai.google.dev/gemini-api/docs/audio).
+
+Create an ElevenLabs personal API key with text-to-speech permission only and set it as `ELEVENLABS_API_KEY`. The server sends only Gemini's short reply to ElevenLabs and plays the returned audio. Speech uses the credits already included in the account plan; if ElevenLabs is unavailable or out of credits, the browser's built-in voice reads the same answer. Keep automatic top-up disabled if you do not want the ElevenLabs account to buy more credits. See [ElevenLabs API keys](https://elevenlabs.io/docs/overview/administration/workspaces/api-keys) and [text-to-speech API](https://elevenlabs.io/docs/api-reference/text-to-speech/stream).
+
+The selected site language is sent to Gemini for its spoken answer. The recognized words are kept in short-term browser memory to support follow-up questions; LocalLoops does not display or save a transcript. Gemini and ElevenLabs process the audio or generated reply to provide the service.
 
 ## Translate the site
 
@@ -65,8 +74,8 @@ Create a Google Cloud API key, enable Cloud Translation API, and set `GOOGLE_TRA
 
 ## Deploy to Vercel
 
-Import this repository into Vercel with the Vite framework preset. Add the Supabase URL and publishable key as `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, then add the event-provider keys above as server-only variables. Apply the Supabase migration and set Auth redirect URLs before inviting members. Vercel builds the Vite app and deploys the `api/` handlers as serverless functions.
+Import this repository into Vercel with the Vite framework preset. Add the Supabase URL and publishable key as `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, then add event-provider and voice keys as server-only variables. Apply the Supabase migration and set Auth redirect URLs before inviting members. Vercel builds the Vite app and deploys the `api/` handlers as serverless functions.
 
 ## Scope
 
-LocalLoops has email/password sign-in, profiles, opt-in member discovery, connection requests, accepted-connection messages, public community events, event RSVPs, and public-place ride coordination. The large sprout character is the friendly product guide. The homepage sample conversation is an illustrative preview, not a live AI exchange. The voice interface is wired to ElevenLabs but needs an agent ID and server API key in deployment settings before a live conversation can start; Gemma and AI answers grounded in live LocalLoops data are not connected.
+LocalLoops has email/password sign-in, profiles, opt-in member discovery, connection requests, accepted-connection messages, public community events, event RSVPs, and public-place ride coordination. The large sprout character is Leafy, the voice guide. The guide uses Gemini for spoken questions and answers, and ElevenLabs for speech synthesis; browser speech synthesis provides a fallback.
