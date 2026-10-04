@@ -33,6 +33,8 @@ const DEFAULT_AZURE_FOUNDRY_DEPLOYMENT = 'grok-4.6'
 const ELEVENLABS_VOICE_ID = 'onwK4e9ZLuTAKqWW03F9'
 const MAX_TRANSCRIPT_LENGTH = 1200
 const MAX_REPLY_LENGTH = 500
+const GROK_TIMEOUT_MS = 35_000
+const GROK_MAX_COMPLETION_TOKENS = 512
 
 export function getGuideConfigStatus(secrets: GuideSecrets) {
   return {
@@ -60,7 +62,33 @@ export async function handleGuideRequest(
   try {
     const context = normalizeContext(body.context)
     const history = normalizeHistory(body.history)
-    const answer = await generateGrokReply({ transcript, history, context, endpoint, apiKey, deployment, fetcher })
+    let answer: { reply: string; model: string; usedAI: boolean }
+    try {
+      const grokAnswer = await generateGrokReply({
+        transcript,
+        history,
+        context,
+        endpoint,
+        apiKey,
+        deployment,
+        reasoningEffort: 'low',
+        timeoutMs: GROK_TIMEOUT_MS,
+        maxCompletionTokens: GROK_MAX_COMPLETION_TOKENS,
+        fetcher,
+      })
+      answer = { ...grokAnswer, usedAI: true }
+    } catch (grokError) {
+      answer = {
+        reply: buildEventFallbackReply(transcript, context),
+        model: 'event-list-fallback',
+        usedAI: false,
+      }
+      console.warn('LocalLoops voice AI fallback used', {
+        model: deployment,
+        upstreamStatus: grokError instanceof ProviderError ? grokError.status : undefined,
+        errorName: grokError instanceof Error ? grokError.name : 'unknown',
+      })
+    }
     let audioBase64: string | undefined
     let voiceProvider: 'elevenlabs' | 'browser' = 'browser'
 
@@ -77,7 +105,8 @@ export async function handleGuideRequest(
     return json(200, {
       heard: cleanSpokenText(transcript).slice(0, MAX_TRANSCRIPT_LENGTH),
       reply: answer.reply,
-      provider: 'grok',
+      provider: answer.usedAI ? 'grok' : 'event-list-fallback',
+      model: answer.model,
       voiceProvider,
       ...(audioBase64 ? { audioBase64 } : {}),
     })
@@ -101,6 +130,9 @@ async function generateGrokReply({
   endpoint,
   apiKey,
   deployment,
+  reasoningEffort,
+  timeoutMs,
+  maxCompletionTokens,
   fetcher,
 }: {
   transcript: string
@@ -109,6 +141,9 @@ async function generateGrokReply({
   endpoint: string
   apiKey: string
   deployment: string
+  reasoningEffort: 'low' | undefined
+  timeoutMs: number
+  maxCompletionTokens: number
   fetcher: typeof fetch
 }) {
   const systemPrompt = [
@@ -139,11 +174,10 @@ async function generateGrokReply({
     body: JSON.stringify({
       model: deployment,
       messages,
-      reasoning_effort: 'high',
-      max_completion_tokens: 2048,
+      ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
+      max_completion_tokens: maxCompletionTokens,
     }),
-    // Keep the model call and ElevenLabs call inside Vercel's 55-second route limit.
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
 
   if (!response.ok) throw new ProviderError(response.status)
@@ -151,7 +185,7 @@ async function generateGrokReply({
   const text = result.choices?.[0]?.message?.content
   const reply = cleanSpokenText(typeof text === 'string' ? text : '').slice(0, MAX_REPLY_LENGTH)
   if (!reply) throw new ProviderError(502)
-  return { reply }
+  return { reply, model: deployment }
 }
 
 type ChatCompletionResponse = {
@@ -176,7 +210,7 @@ async function generateElevenLabsAudio(text: string, apiKey: string, fetcher: ty
         model_id: 'eleven_flash_v2_5',
         voice_settings: { stability: 0.55, similarity_boost: 0.72, speed: 1.0 },
       }),
-      signal: AbortSignal.timeout(12_000),
+      signal: AbortSignal.timeout(10_000),
     },
   )
 
@@ -184,6 +218,39 @@ async function generateElevenLabsAudio(text: string, apiKey: string, fetcher: ty
   const bytes = new Uint8Array(await response.arrayBuffer())
   if (!bytes.length) throw new Error('ElevenLabs returned empty audio')
   return bytesToBase64(bytes)
+}
+
+function buildEventFallbackReply(transcript: string, context: GuideContext) {
+  if (!context.events.length) {
+    return context.location
+      ? `My AI helper is taking too long, and I don't have any event listings loaded near ${context.location} yet. Refresh the events and ask me again.`
+      : 'My AI helper is taking too long. Search for a town or ZIP code first so I can read the live event listings for you.'
+  }
+
+  const terms = transcript.toLowerCase().split(/[^a-z0-9]+/).filter((term) => term.length > 2)
+  const freeOnly = /\bfree\b|no cost|without paying/i.test(transcript)
+  const candidates = context.events.filter((event) => !freeOnly || event.isFree === true)
+  const pool = candidates.length ? candidates : context.events
+  const selected = pool
+    .map((event) => {
+      const searchable = `${event.title} ${event.category} ${event.description}`.toLowerCase()
+      const score = terms.reduce((total, term) => total + (searchable.includes(term) ? 1 : 0), 0)
+      return { event, score }
+    })
+    .sort((a, b) => b.score - a.score || (a.event.distanceMiles ?? Infinity) - (b.event.distanceMiles ?? Infinity))
+    .slice(0, 3)
+    .map(({ event }) => {
+      const place = [event.city, event.state].filter(Boolean).join(', ')
+      const time = event.timeLabel || event.startsAt
+      const distance = event.distanceMiles === null ? '' : `${Math.round(event.distanceMiles)} miles away`
+      const cost = event.isFree === true ? 'free' : event.isFree === false ? 'ticketed' : 'price not listed'
+      return [event.title, time, place, distance, cost].filter(Boolean).join(', ')
+    })
+
+  const note = freeOnly && candidates.length === 0 ? 'I do not see a free listing in this group. ' : ''
+  const listings = selected.join('; ')
+  return cleanSpokenText(`My AI helper is taking too long, but I can read the live listings near ${context.location || 'your selected area'}: ${note}${listings}.`)
+    .slice(0, MAX_REPLY_LENGTH)
 }
 
 function normalizeContext(value: unknown): GuideContext {
