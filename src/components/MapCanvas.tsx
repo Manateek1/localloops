@@ -5,6 +5,8 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import type { CommunityEvent, LocationResult } from '../data/models'
 import { EVENT_SEARCH_RADIUS_MILES } from '../data/constants'
 import type { Feature, Polygon } from 'geojson'
+import { translateOfflineText } from '../lib/offlineTranslations'
+import { useLanguage } from '../features/LanguageProvider'
 
 setWorkerUrl(mapWorkerUrl)
 
@@ -47,6 +49,7 @@ function searchRadiusFeature(location: LocationResult, radiusMiles: number): Fea
 }
 
 export function MapCanvas({ location, events, showSearchRadius = false, searchRadiusMiles = EVENT_SEARCH_RADIUS_MILES, onOpenEvent }: MapCanvasProps) {
+  const { language } = useLanguage()
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef<Marker[]>([])
@@ -166,15 +169,17 @@ export function MapCanvas({ location, events, showSearchRadius = false, searchRa
       const button = document.createElement('button')
       button.type = 'button'
       button.className = `greet-map-marker greet-map-marker--${event.source}`
-      button.setAttribute('aria-label', `Open ${event.title} in ${event.city}, ${event.stateCode}`)
+      const markerLabel = `Open ${event.title} in ${event.city}, ${event.stateCode}`
+      button.setAttribute('aria-label', translateOfflineText(markerLabel, language) ?? markerLabel)
       button.title = event.title
+      button.setAttribute('translate', 'no')
       button.textContent = '•'
       button.addEventListener('click', () => onOpenRef.current(event.id))
       return new Marker({ element: button, anchor: 'bottom' })
         .setLngLat([event.longitude, event.latitude])
         .addTo(map)
     })
-  }, [events])
+  }, [events, language])
 
   return (
     <div className="greet-map" role="region" aria-label={showSearchRadius ? `Map of events within ${searchRadiusMiles} miles` : 'Map of real nearby events'}>

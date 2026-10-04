@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 
 import eventsHandler from './api/events.ts'
 import geocodeHandler from './api/geocode.ts'
-import translateHandler from './api/translate.ts'
 import guideHandler from './api/guide.ts'
 
 function localApi(): Plugin {
@@ -12,7 +11,7 @@ function localApi(): Plugin {
     configureServer(server) {
       server.middlewares.use((request, response, next) => {
         const pathname = new URL(request.url ?? '/', 'http://localhost').pathname
-        const handler = pathname === '/api/events' ? eventsHandler : pathname === '/api/geocode' ? geocodeHandler : pathname === '/api/translate' ? translateHandler : pathname === '/api/guide' ? guideHandler : null
+        const handler = pathname === '/api/events' ? eventsHandler : pathname === '/api/geocode' ? geocodeHandler : pathname === '/api/guide' ? guideHandler : null
         if (!handler) return next()
         const wrapped = {
           setHeader: (name: string, value: string) => response.setHeader(name, value),
@@ -25,7 +24,7 @@ function localApi(): Plugin {
             response.end(JSON.stringify(body))
           },
         }
-        const invoke = () => { void handler({ method: request.method, url: request.url }, wrapped).catch(next) }
+        const invoke = () => { void handler({ method: request.method }, wrapped).catch(next) }
         if (request.method !== 'POST') {
           invoke()
           return
@@ -52,7 +51,7 @@ function localApi(): Plugin {
           }
           try {
             const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown
-            void handler({ method: request.method, url: request.url, body }, wrapped).catch(next)
+            void handler({ method: request.method, body }, wrapped).catch(next)
           } catch {
             response.statusCode = 400
             response.setHeader('Content-Type', 'application/json; charset=utf-8')
@@ -68,7 +67,7 @@ export default defineConfig(({ mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), '')
     if (!process.env.TICKETMASTER_API_KEY && localEnv.TICKETMASTER_API_KEY) process.env.TICKETMASTER_API_KEY = localEnv.TICKETMASTER_API_KEY
     if (!process.env.NPS_API_KEY && localEnv.NPS_API_KEY) process.env.NPS_API_KEY = localEnv.NPS_API_KEY
-    for (const key of ['AZURE_FOUNDRY_ENDPOINT', 'AZURE_FOUNDRY_API_KEY', 'AZURE_FOUNDRY_DEPLOYMENT', 'ELEVENLABS_API_KEY', 'GOOGLE_TRANSLATE_API_KEY', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY']) {
+    for (const key of ['AZURE_FOUNDRY_ENDPOINT', 'AZURE_FOUNDRY_API_KEY', 'AZURE_FOUNDRY_DEPLOYMENT', 'ELEVENLABS_API_KEY', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY']) {
       if (!process.env[key] && localEnv[key]) process.env[key] = localEnv[key]
     }
   return {

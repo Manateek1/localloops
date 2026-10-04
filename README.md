@@ -74,9 +74,9 @@ The selected site language is used for browser speech recognition and sent to Gr
 
 ## Translate the site
 
-LocalLoops defaults to English. The header language picker translates public interface and event text with Google Cloud Translation. Private profile fields, member names, and direct messages are excluded. The full Google language list appears when the translation API is configured; a common-language list remains available before then.
+LocalLoops defaults to English. The language picker includes the bundled English, Spanish, French, Portuguese, Simplified Chinese, Hindi, and Vietnamese interface translations. They are stored with the app, so changing the interface language needs no translation API, key, billing account, or network request. The translated interface covers the text included in the offline catalogs; new interface copy must be added to those catalogs.
 
-Create a Google Cloud API key, enable Cloud Translation API, and set `GOOGLE_TRANSLATE_API_KEY` as a server-only environment variable in `.env.local` or Vercel. Restrict the key to Cloud Translation API and set an API quota before deploying. A billing-enabled project is required. Google's current pricing applies a monthly $10 credit to the first 500,000 text characters, then charges $20 per million characters for Cloud Translation Basic. See [Google Cloud setup](https://docs.cloud.google.com/translate/docs/setup) and [current pricing](https://cloud.google.com/products/translate/pricing). Without the key, the picker stays available, but the page remains in English with a setup notice.
+Event listings, event descriptions, community posts, member names, pickup notes, and private messages remain in the language they were written or supplied in. The language picker does not translate arbitrary user or event-provider content.
 
 ## Deploy to Vercel
 

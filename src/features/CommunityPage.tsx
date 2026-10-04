@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { CommunityEvent, Profile } from '../data/models'
 import type { CommunityMemberRow, CommunityRow, EventRow, FriendshipRow, ProfileRow, Database } from '../lib/supabase/database.types'
 import { US_STATES } from '../data/models'
+import { useLanguage } from './LanguageProvider'
 
 type CommunityPageProps = {
   client: SupabaseClient<Database> | null
@@ -28,10 +29,10 @@ type CommunityList = 'discover' | 'mine'
 type PeopleList = 'discover' | 'friends'
 type CommunitySummary = Pick<CommunityRow, 'id' | 'name' | 'description' | 'region_label' | 'member_count' | 'created_at'>
 
-function formatEventDate(value: string) {
-  return new Date(value).toLocaleString(undefined, {
+function formatEventDate(value: string, language: string) {
+  return new Intl.DateTimeFormat(language, {
     weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
-  })
+  }).format(new Date(value))
 }
 
 function asCommunityEvent(event: EventRow, hostName: string | undefined): CommunityEvent {
@@ -60,6 +61,7 @@ function asCommunityEvent(event: EventRow, hostName: string | undefined): Commun
 }
 
 export function CommunityPage({ client, profiles, friendships, userId, stateCode, loading, error, onRetry, profile, onRequest, onAccept, onMessage, onCreateEvent, onOpenEvent, onSignIn }: CommunityPageProps) {
+  const { language } = useLanguage()
   const [section, setSection] = useState<CommunitySection>('communities')
   const [communityList, setCommunityList] = useState<CommunityList>('discover')
   const [peopleList, setPeopleList] = useState<PeopleList>('discover')
@@ -286,10 +288,10 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
               <div className="greet-community-detail__header">
                 <div>
                   <p className="greet-eyebrow">Community</p>
-                  <h2>{selectedCommunity.name}</h2>
-                  <p className="greet-community-detail__description">{selectedCommunity.description || 'A place for neighbors to connect and make plans.'}</p>
+                  <h2 translate="no">{selectedCommunity.name}</h2>
+                  <p className="greet-community-detail__description" translate={selectedCommunity.description ? 'no' : undefined}>{selectedCommunity.description || 'A place for neighbors to connect and make plans.'}</p>
                   <div className="greet-community-meta">
-                    {selectedCommunity.region_label && <span><MapPin size={14} />{selectedCommunity.region_label}</span>}
+                    {selectedCommunity.region_label && <span translate="no"><MapPin size={14} />{selectedCommunity.region_label}</span>}
                     <span><Users size={14} />{selectedCommunity.member_count} of 50 members</span>
                   </div>
                 </div>
@@ -315,7 +317,7 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
                   : communityEvents.length ? <div className="greet-community-event-list">
                       {communityEvents.map((event) => <button className="greet-community-event" type="button" key={event.id} onClick={() => onOpenEvent(asCommunityEvent(event, communityEventHosts[event.host_id]))}>
                         <span className="greet-community-event__icon"><CalendarDays size={19} /></span>
-                        <span className="greet-community-event__body"><strong>{event.title}</strong><small>{formatEventDate(event.starts_at)} · {event.venue_label}</small></span>
+                        <span className="greet-community-event__body"><strong translate="no">{event.title}</strong><small><span translate="no">{formatEventDate(event.starts_at, language)} · {event.venue_label}</span></small></span>
                         <span className="greet-community-event__arrow">View</span>
                       </button>)}
                     </div>
@@ -357,7 +359,7 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
                           return <article className="greet-community-card" key={community.id}>
                             <button className="greet-community-card__main" type="button" onClick={() => setSelectedCommunityId(community.id)}>
                               <span className="greet-community-card__icon"><Users size={21} /></span>
-                              <span className="greet-community-card__body"><strong>{community.name}</strong><small>{community.description || 'A place for neighbors to connect and make plans.'}</small><span className="greet-community-card__meta">{community.region_label && <span><MapPin size={12} />{community.region_label}</span>}<span><Users size={12} />{community.member_count}/50</span>{community.member_count < 2 && <span>Getting started</span>}</span></span>
+                              <span className="greet-community-card__body"><strong translate="no">{community.name}</strong><small translate={community.description ? 'no' : undefined}>{community.description || 'A place for neighbors to connect and make plans.'}</small><span className="greet-community-card__meta">{community.region_label && <span translate="no"><MapPin size={12} />{community.region_label}</span>}<span><Users size={12} />{community.member_count}/50</span>{community.member_count < 2 && <span>Getting started</span>}</span></span>
                             </button>
                             <div className="greet-community-card__actions">
                               {joined ? <span className="greet-community-joined"><Check size={13} />Joined</span>

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { ArrowUpRight, Check, MessageCircle, UserRound } from 'lucide-react'
 import type { MessageRow, FriendshipRow } from '../lib/supabase/database.types'
 import type { Profile } from '../data/models'
+import { useLanguage } from './LanguageProvider'
 
 type InboxPageProps = {
   userId: string | null
@@ -18,6 +19,7 @@ type InboxPageProps = {
 }
 
 export function InboxPage({ userId, friendships, messages, profilesById, loading, error, onRetry, onOpenMessage, onAccept, onDismiss, onSignIn }: InboxPageProps) {
+  const { language } = useLanguage()
   const [tab, setTab] = useState<'messages' | 'requests'>('messages')
   const accepted = friendships.filter((friendship) => friendship.status === 'accepted')
   const incoming = friendships.filter((friendship) => friendship.status === 'pending' && friendship.addressee_id === userId)
@@ -47,7 +49,7 @@ export function InboxPage({ userId, friendships, messages, profilesById, loading
               <button className="greet-conversation" type="button" key={friendship.id} onClick={() => onOpenMessage(friendship.id)}>
                 <span className="greet-member-avatar greet-member-avatar--initials" aria-hidden="true">{name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'N'}</span>
                 <span className="greet-conversation__body"><strong translate="no">{name}</strong><small translate={latest ? 'no' : undefined}>{latest ? `${latest.sender_id === userId ? 'You: ' : ''}${latest.body}` : 'Your conversation is ready when you are.'}</small></span>
-                <span className="greet-conversation__meta">{latest ? new Date(latest.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Say hello'}<ArrowUpRight size={16} /></span>
+                <span className="greet-conversation__meta">{latest ? new Intl.DateTimeFormat(language, { month: 'short', day: 'numeric' }).format(new Date(latest.created_at)) : 'Say hello'}<ArrowUpRight size={16} /></span>
               </button>
             ))}</div> : <div className="greet-empty-inbox"><MessageCircle size={25} /><h2>No messages yet.</h2><p>When you accept a connection, you can send a private message here.</p></div>
           ) : (
