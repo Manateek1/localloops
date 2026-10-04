@@ -155,9 +155,14 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
     const matchesSearch = `${community.name} ${community.description} ${community.region_label ?? ''}`.toLowerCase().includes(query.toLowerCase())
     return matchesList && matchesSearch
   }), [communities, communityList, memberCommunityIds, query])
+  const sharedInterests = (candidate: Profile) => {
+    const candidateInterests = new Set(candidate.interests.map((interest) => interest.trim().toLowerCase()))
+    return (profile?.interests ?? []).filter((interest) => candidateInterests.has(interest.trim().toLowerCase()))
+  }
   const visibleProfiles = useMemo(() => profiles.filter((item) =>
     `${item.display_name} ${item.home_region ?? ''} ${item.interests.join(' ')} ${item.bio ?? ''}`
-      .toLowerCase().includes(query.toLowerCase())), [profiles, query])
+      .toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => sharedInterests(b).length - sharedInterests(a).length), [profiles, profile, query])
   const initials = (value: string) => value.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'N'
 
   function relationshipWith(profileId: string) {
@@ -340,12 +345,13 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
             <section className="greet-member-list" aria-label="Discoverable LocalLoops members">
               {visibleProfiles.map((person) => {
                 const relationship = relationshipWith(person.id)
+                const matchedInterests = sharedInterests(person)
                 const accepted = relationship?.status === 'accepted'
                 const incoming = relationship?.status === 'pending' && relationship.addressee_id === userId
                 const sent = relationship?.status === 'pending' && relationship.requester_id === userId
                 return <article className="greet-member-card" key={person.id}>
                   {person.avatar_url ? <img className="greet-member-avatar" src={person.avatar_url} alt="" referrerPolicy="no-referrer" /> : <span className="greet-member-avatar greet-member-avatar--initials" aria-hidden="true">{initials(person.display_name)}</span>}
-                  <div className="greet-member-card__body"><h2 translate="no">{person.display_name}</h2>{person.home_region && <p className="greet-member-location" translate="no"><MapPin size={13} />{person.home_region}</p>}{person.bio && <p className="greet-member-bio" translate="no">{person.bio}</p>}{person.interests.length > 0 && <div className="greet-tag-list" translate="no">{person.interests.slice(0, 5).map((interest) => <span key={interest}>{interest}</span>)}</div>}</div>
+                  <div className="greet-member-card__body"><h2 translate="no">{person.display_name}</h2>{person.home_region && <p className="greet-member-location" translate="no"><MapPin size={13} />{person.home_region}</p>}{person.bio && <p className="greet-member-bio" translate="no">{person.bio}</p>}{matchedInterests.length > 0 && <p className="greet-member-match">Shares {matchedInterests.slice(0, 3).join(', ')} with you</p>}{person.interests.length > 0 && <div className="greet-tag-list" translate="no">{person.interests.slice(0, 5).map((interest) => <span key={interest}>{interest}</span>)}</div>}</div>
                   <div className="greet-member-action">{accepted ? <button className="greet-button greet-button--outline" type="button" onClick={() => relationship && onMessage(relationship.id)}><MessageCircle size={15} />Message</button> : incoming ? <button className="greet-button greet-button--soft" type="button" onClick={() => relationship && onAccept(relationship.id)}><Check size={15} />Accept</button> : sent ? <button className="greet-button greet-button--quiet" type="button" disabled>Request sent</button> : <button className="greet-button greet-button--outline" type="button" onClick={() => onRequest(person.id)}><UserRoundPlus size={15} />Say hello</button>}</div>
                 </article>
               })}

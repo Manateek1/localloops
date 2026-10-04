@@ -78,8 +78,7 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-location-search input { flex: 1; min-width: 0; height: 47px; padding: 0 8px; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 15px; }
 .greet-location-search input::placeholder { color: #939a91; }
 .greet-search-help { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 4px 3px 0; color: #818980; font-size: 10px; }
-.greet-search-help label { display: inline-flex; align-items: center; gap: 8px; color: #596a5d; font-weight: 700; }
-.greet-search-help select { border: 1px solid #e3e6dd; border-radius: 8px; padding: 6px 9px; color: var(--forest); background: #fffefa; font-size: 11px; }
+.greet-radius-note { display: inline-flex; align-items: center; gap: 5px; color: #596a5d; font-weight: 700; }
 .greet-explore-panel { padding: 18px; border: 1px solid var(--border); border-radius: 24px; background: rgba(255, 254, 250, .8); box-shadow: 0 14px 38px rgba(39, 55, 43, .035); }
 .greet-explore-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 2px 2px 15px; }
 .greet-area-label { display: inline-flex; align-items: center; gap: 11px; min-width: 0; }
@@ -102,6 +101,8 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-map { height: 410px; position: relative; overflow: hidden; border: 1px solid #dfe5d9; border-radius: 18px; background: #e7ecdf; isolation: isolate; }
 .greet-map__canvas { position: absolute; inset: 0; }
 .greet-map .greet-map__canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.greet-map__radius-label { position: absolute; z-index: 2; top: 12px; left: 12px; display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid rgba(225,228,218,.9); border-radius: 9px; background: rgba(255,254,250,.94); color: #45614c; box-shadow: 0 3px 12px rgba(36,54,39,.08); font-size: 10px; font-weight: 700; pointer-events: none; }
+.greet-map__radius-label span { width: 9px; height: 9px; border: 1px solid #47785b; border-radius: 50%; background: rgba(108,154,119,.25); }
 .greet-map--loading { display: grid; place-items: center; color: #5a6f60; font-size: 12px; }
 .greet-map__prompt { position: absolute; z-index: 2; left: 12px; bottom: 12px; max-width: calc(100% - 24px); padding: 7px 10px; border: 1px solid rgba(225,228,218,.9); border-radius: 9px; background: rgba(255,254,250,.94); color: #5a6f60; box-shadow: 0 3px 12px rgba(36,54,39,.08); font-size: 10px; pointer-events: none; }
 .greet-map__prompt--location { bottom: 39px; }
@@ -245,6 +246,7 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-member-bio { margin: 5px 0 7px; color: #68736b; font-size: 11px; line-height: 1.5; }
 .greet-tag-list { display: flex; flex-wrap: wrap; gap: 5px; }
 .greet-tag-list span { padding: 4px 8px; border-radius: 999px; color: #45614c; background: #e8eee5; font-size: 9px; font-weight: 650; }
+.greet-member-match { margin: 5px 0 0; color: #5f7a55; font-size: 10px; font-weight: 700; }
 .greet-member-action { display: flex; justify-content: flex-end; }
 .greet-member-action .greet-button { min-width: 105px; min-height: 36px; }
 .greet-inbox-card { overflow: hidden; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); }
@@ -566,8 +568,7 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
   .greet-location-search .greet-button { min-height: 35px; padding: 0 8px; font-size: 9px; }
   .greet-location-search .greet-button svg { display: none; }
   .greet-search-help { align-items: flex-start; font-size: 8px; }
-  .greet-search-help label { gap: 5px; font-size: 8px; }
-  .greet-search-help select { padding: 5px 5px; font-size: 9px; }
+  .greet-radius-note { gap: 4px; font-size: 8px; }
   .greet-explore-panel { padding: 9px; }
   .greet-area-label { gap: 7px; }
   .greet-area-label__icon { width: 31px; height: 31px; }
