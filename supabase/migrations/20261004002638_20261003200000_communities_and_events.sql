@@ -38,7 +38,9 @@ revoke all on table public.localloops_communities, public.localloops_community_m
 -- Community discovery exposes only group details and a member count, not creator IDs.
 grant select (id, name, description, region_label, member_count, created_at)
   on public.localloops_communities to anon, authenticated;
-grant select on public.localloops_community_members to authenticated;
+grant select, delete on public.localloops_community_members to authenticated;
+grant insert (name, description, region_label, created_by) on public.localloops_communities to authenticated;
+grant insert (community_id, user_id) on public.localloops_community_members to authenticated;
 grant insert (community_id) on public.localloops_events to authenticated;
 grant update (community_id) on public.localloops_events to authenticated;
 
@@ -46,12 +48,28 @@ create policy "Anyone can discover public localloops_communities"
   on public.localloops_communities for select to anon, authenticated
   using (true);
 
+create policy "Members create their own localloops_communities"
+  on public.localloops_communities for insert to authenticated
+  with check ((select auth.uid()) = created_by);
+
 create policy "Members can read their own community memberships"
   on public.localloops_community_members for select to authenticated
   using ((select auth.uid()) = user_id);
 
--- Keep the public count accurate for creates, joins, leaves, and account deletion.
-create function public.localloops_maintain_community_member_count()
+create policy "Members join localloops_communities as themselves"
+  on public.localloops_community_members for insert to authenticated
+  with check ((select auth.uid()) = user_id);
+
+create policy "Members can leave localloops_communities"
+  on public.localloops_community_members for delete to authenticated
+  using ((select auth.uid()) = user_id and role = 'member');
+
+-- A private trigger keeps the public count accurate and caps group membership.
+-- It is the only LocalLoops SECURITY DEFINER helper and is not in an API-exposed schema.
+create schema localloops_private;
+revoke all on schema localloops_private from public, anon, authenticated, service_role;
+
+create function localloops_private.maintain_community_member_count()
 returns trigger
 language plpgsql
 security definer
@@ -65,6 +83,15 @@ begin
     if not found then
       raise exception 'This community has reached its 50 member limit.' using errcode = '23514';
     end if;
+
+    update public.localloops_community_members m
+      set role = 'owner'
+      where m.community_id = new.community_id
+        and m.user_id = new.user_id
+        and exists (
+          select 1 from public.localloops_communities c
+          where c.id = new.community_id and c.created_by = new.user_id
+        );
     return new;
   end if;
 
@@ -75,14 +102,14 @@ begin
 end;
 $$;
 
-revoke all on function public.localloops_maintain_community_member_count() from public, anon, authenticated, service_role;
+revoke all on function localloops_private.maintain_community_member_count() from public, anon, authenticated, service_role;
 
 create trigger localloops_maintain_community_member_count_after_insert
   after insert on public.localloops_community_members
-  for each row execute function public.localloops_maintain_community_member_count();
+  for each row execute function localloops_private.maintain_community_member_count();
 create trigger localloops_maintain_community_member_count_after_delete
   after delete on public.localloops_community_members
-  for each row execute function public.localloops_maintain_community_member_count();
+  for each row execute function localloops_private.maintain_community_member_count();
 
 -- Creation and membership changes are atomic; a row lock prevents concurrent joins
 -- from taking a community past its 50 person limit.
@@ -93,7 +120,7 @@ create function public.localloops_create_community(
 )
 returns uuid
 language plpgsql
-security definer
+security invoker
 set search_path = ''
 as $$
 declare
@@ -119,8 +146,8 @@ begin
   insert into public.localloops_communities (name, description, region_label, created_by)
     values (v_name, v_description, v_region, v_user_id)
     returning id into v_community_id;
-  insert into public.localloops_community_members (community_id, user_id, role)
-    values (v_community_id, v_user_id, 'owner');
+  insert into public.localloops_community_members (community_id, user_id)
+    values (v_community_id, v_user_id);
   return v_community_id;
 end;
 $$;
@@ -128,7 +155,7 @@ $$;
 create function public.localloops_join_community(p_community_id uuid)
 returns integer
 language plpgsql
-security definer
+security invoker
 set search_path = ''
 as $$
 declare
@@ -140,24 +167,16 @@ begin
   end if;
 
   select member_count into v_member_count
-    from public.localloops_communities where id = p_community_id for update;
+    from public.localloops_communities where id = p_community_id;
   if not found then
     raise exception 'This community no longer exists.' using errcode = 'P0002';
   end if;
 
-  if exists (
-    select 1 from public.localloops_community_members
-      where community_id = p_community_id and user_id = v_user_id
-  ) then
-    return v_member_count;
-  end if;
-  if v_member_count >= 50 then
-    raise exception 'This community has reached its 50 member limit.' using errcode = '23514';
-  end if;
-
-  insert into public.localloops_community_members (community_id, user_id, role)
-    values (p_community_id, v_user_id, 'member');
-  select member_count into v_member_count from public.localloops_communities where id = p_community_id;
+  insert into public.localloops_community_members (community_id, user_id)
+    values (p_community_id, v_user_id)
+    on conflict (community_id, user_id) do nothing;
+  select member_count into v_member_count
+    from public.localloops_communities where id = p_community_id;
   return v_member_count;
 end;
 $$;
@@ -165,30 +184,32 @@ $$;
 create function public.localloops_leave_community(p_community_id uuid)
 returns integer
 language plpgsql
-security definer
+security invoker
 set search_path = ''
 as $$
 declare
   v_user_id uuid := auth.uid();
-  v_owner_id uuid;
+  v_role text;
   v_member_count integer;
 begin
   if v_user_id is null then
     raise exception 'Sign in to leave a community.' using errcode = '42501';
   end if;
 
-  select created_by, member_count into v_owner_id, v_member_count
-    from public.localloops_communities where id = p_community_id for update;
+  select role into v_role
+    from public.localloops_community_members
+    where community_id = p_community_id and user_id = v_user_id;
   if not found then
-    raise exception 'This community no longer exists.' using errcode = 'P0002';
+    raise exception 'You are not a member of this community.' using errcode = '42501';
   end if;
-  if v_owner_id = v_user_id then
+  if v_role = 'owner' then
     raise exception 'Community organizers cannot leave their own community.' using errcode = '42501';
   end if;
 
   delete from public.localloops_community_members
     where community_id = p_community_id and user_id = v_user_id;
-  select member_count into v_member_count from public.localloops_communities where id = p_community_id;
+  select member_count into v_member_count
+    from public.localloops_communities where id = p_community_id;
   return v_member_count;
 end;
 $$;

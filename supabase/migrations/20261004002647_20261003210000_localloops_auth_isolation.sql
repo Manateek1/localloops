@@ -3,6 +3,10 @@
 -- user who signs up through LocalLoops.
 do $$
 begin
+  if to_regprocedure('public.handle_new_user()') is not null then
+    execute 'revoke all on function public.handle_new_user() from public, anon, authenticated, service_role';
+  end if;
+
   if to_regprocedure('public.handle_new_user()') is not null
     and exists (
       select 1
@@ -48,6 +52,7 @@ begin
       end;
       $body$;
     $ddl$;
+    execute 'revoke all on function public.handle_new_user() from public, anon, authenticated, service_role';
   end if;
 end;
 $$;

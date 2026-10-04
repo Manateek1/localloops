@@ -33,12 +33,11 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
           password,
           options: {
             data: { localloops_app: true, localloops_display_name: name.trim() },
-            emailRedirectTo: window.location.origin,
           },
         })
         if (signupError) throw signupError
-        if (data.session) onClose()
-        else setMessage('Check your email for a confirmation link. Your profile will be ready when you return.')
+        if (!data.session) throw new Error('Your account was created, but this project did not sign you in. Email confirmation must be turned off.')
+        onClose()
       } else {
         const { error: signinError } = await client.auth.signInWithPassword({ email: email.trim(), password })
         if (signinError) throw signinError

@@ -51,7 +51,7 @@ create table public.localloops_event_rsvps (
 );
 
 create table public.localloops_external_event_rsvps (
-  event_source text not null check (event_source in ('ticketmaster', 'nps')),
+  event_source text not null check (event_source in ('ticketmaster', 'nps', 'ticketfairy')),
   source_event_id text not null,
   user_id uuid not null references auth.users (id) on delete cascade,
   status text not null check (status in ('going', 'interested')),
@@ -98,7 +98,7 @@ create table public.localloops_ride_posts (
 
 create table public.localloops_external_ride_posts (
   id uuid primary key default gen_random_uuid(),
-  event_source text not null check (event_source in ('ticketmaster', 'nps')),
+  event_source text not null check (event_source in ('ticketmaster', 'nps', 'ticketfairy')),
   source_event_id text not null,
   user_id uuid not null references auth.users (id) on delete cascade,
   kind text not null check (kind in ('request', 'offer')),
@@ -155,6 +155,7 @@ revoke all on table
 from public, anon, authenticated, service_role;
 
 grant select on public.localloops_profiles to authenticated;
+grant insert (id, display_name) on public.localloops_profiles to authenticated;
 grant insert (id, display_name, avatar_url, bio, home_region, state_code, interests, discoverable)
   on public.localloops_profiles to authenticated;
 grant select on public.localloops_events to authenticated;
@@ -382,7 +383,7 @@ create policy "Members mark their own localloops_notifications as read"
 create function public.localloops_ensure_profile(p_display_name text default null)
 returns void
 language plpgsql
-security definer
+security invoker
 set search_path = ''
 as $$
 declare
