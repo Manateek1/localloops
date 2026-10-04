@@ -1,87 +1,39 @@
 # LocalLoops
 
-LocalLoops helps people find public events and neighbors in their area, including rural communities where nearby plans may be spread across several towns. It searches live listings from Ticket Fairy and, when their keys are configured, Ticketmaster and the National Park Service. Members can host public gatherings and mark that they are going; LocalLoops never fills gaps with sample people or invented events.
+**LocalLoops** connects neighbors and surfaces real gatherings across local and rural communities. While city dwellers have countless event apps, rural residents often live 20 to 70 miles apart and rely on fragmented cork boards or word of mouth. LocalLoops bridges that distance—uniting neighbors around shared passions, community carpooling, and hands-free conversational voice AI—while fiercely protecting rural privacy.
 
-Location search accepts a U.S. street address, ZIP code, or town and state. Street addresses are matched by the U.S. Census Geocoder; ZIP and town searches use approximate postal-place centers. The default radius is 30 miles, with options to narrow it to 20 miles or search farther. Search works across all 50 states, but event coverage depends on provider inventory and member posts. Ticket Fairy's public API returns state-filtered listings, so the app checks up to five pages per state and maps only events inside the chosen radius. The map uses OpenFreeMap tiles based on OpenStreetMap data.
+---
 
-## Run locally
+## 🌟 Key Features
 
-Use a Node.js version supported by Vite 8, then install dependencies and create a local environment file:
+### 🌲 1. Purpose-Built for Rural Communities
+- **County & Region Matching (Zero Address Leakage)**: Matches members by broad county or region (e.g., *Shenandoah County, VA*), never exact GPS pins, street addresses, or ZIP codes.
+- **Extended Rural Radius (25–100 Miles)**: In rural counties, a neighbor or event 35 miles away in the next valley is considered local. The search radius easily expands to encompass regional hubs.
+- **Rural Ride Coordination & Carpooling**: Overcomes rural transit deserts by letting attendees offer or request rides from safe public meeting points.
+- **Shared Passions Matching**: Community directory automatically highlights shared rural interests (e.g., *Local Food Security, Gardening & Seed Swapping, Trail Stewardship, Live Acoustic Music, Outdoor Skills*).
+
+### 🎙️ 2. Sprout AI — Conversational Voice Companion
+- **Hands-Free Voice Discovery**: Especially accessible for older residents or hands-busy neighbors. Tap the mic to speak naturally and hear spoken recommendations about upcoming gatherings.
+- **Dual AI Engine**: Powered by **Grok 4.6 on Microsoft Azure AI Foundry** for intelligent event and community reasoning, paired with **ElevenLabs Text-to-Speech** for warm, lifelike audio.
+- **Multi-Language Support**: Translates community listings and spoken interactions using Google Cloud Translation.
+
+### 🤝 3. Safe, Mutual-Consent Community Connections
+- **Opt-In Directory**: Members choose whether they appear in the local public directory.
+- **Safe Handshakes**: Private messaging only unlocks after *both* neighbors accept a connection request—preventing spam and harassment.
+- **Real Community Gatherings**: Members can start local groups, host gatherings at verified public venues, and RSVP.
+
+---
+
+## 🚀 Quick Start (Run Locally)
+
+LocalLoops requires a Node.js version supported by Vite 8 (Node 20+ recommended).
 
 ```sh
+# 1. Install dependencies
 npm install
+
+# 2. Set up environment variables
 cp .env.example .env.local
+
+# 3. Start local development server
 npm run dev
-```
-
-The Vite development server also runs the `/api/geocode` and `/api/events` handlers locally. Address, ZIP, and town search needs no API key. Ticket Fairy is the no-key live event source; Ticketmaster and National Park Service are optional key-backed sources. Sign-in, member profiles, gatherings, shared attendance, connection requests, and messages need a Supabase URL, publishable key, matching project ref, and the checked-in migrations.
-
-## Configure Supabase
-
-Use a dedicated Supabase project for LocalLoops when available. Its migrations create only `localloops_`-prefixed tables and RPCs, and its signup trigger skips other products' profile creation. Copy the URL, publishable key, and project ref into `.env.local`. The app checks that the URL's project ref matches the configured ref before it enables accounts, which prevents accidentally connecting LocalLoops to a different project.
-
-```dotenv
-VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
-VITE_SUPABASE_PROJECT_REF=YOUR_PROJECT_REF
-```
-
-For immediate email/password signup without verification, turn off **Confirm email** in the project's Supabase Auth email provider settings. Hosted Supabase projects require email confirmation by default; local Supabase uses the checked-in setting `enable_confirmations = false`.
-
-Apply the checked-in migration using the Supabase CLI:
-
-```sh
-supabase login
-supabase link --project-ref YOUR_PROJECT_REF
-supabase db push
-```
-
-The migrations enable row-level security on every app table. A member's “I'm going” status is visible to signed-in members; display names follow profile discovery and connection settings. Profiles are visible only to members who opted into discovery, plus accepted connections. Nearby events are ranked using a member's saved interests and their past community-event attendance. Direct messages require an accepted connection. Members can optionally add a broad town or region and state to be discoverable in that state. Search addresses are not saved, and LocalLoops stores public meetup coordinates and place names, not home addresses or live member locations. Configure the Supabase Auth site URL and allowed redirect URLs for local development and each deployed app origin.
-
-## Connect real event sources
-
-Ticket Fairy's live public event API needs no key. To add the optional Ticketmaster and NPS sources, create their API keys and add them only as server environment variables:
-
-```dotenv
-TICKETMASTER_API_KEY=...
-NPS_API_KEY=...
-```
-
-- [Ticket Fairy's public event API](https://www.ticketfairy.com/developers) supplies live public listings without an account or key. Its public listing filters by state and has pagination; LocalLoops fetches at most five pages (up to 1,000 results) from the next 120 days, then filters by distance.
-- [Ticketmaster Discovery API](https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/) can return listings around the searched coordinates when `TICKETMASTER_API_KEY` is set.
-- [National Park Service API](https://www.nps.gov/subjects/developer/api-documentation.htm) contributes dated NPS events when `NPS_API_KEY` is set.
-
-In Vercel, set these as server-side environment variables. Never prefix them with `VITE_`; the browser calls the `/api/events` function and does not receive either key. The map and place search need no key. Each event card names its source and links back to the original listing. Provider coverage is not a complete catalog of every county fair, library program, or small-town event, so LocalLoops also lets signed-in members publish real public gatherings.
-
-## Voice guide
-
-The guide is voice-only: people tap **Talk to Leafy**, speak, and hear a spoken response. It does not render a text chat or transcript. The browser asks for speech-recognition permission after the button is tapped, transcribes up to 15 seconds, and sends the recognized text to the server-side `/api/guide` handler. This uses the browser's Web Speech recognition API; browsers without it show a setup message. The browser's speech service may process microphone audio under its own terms. Use the deployed HTTPS URL or `localhost`.
-
-Deploy the `grok-4.6` model in [Microsoft Azure AI Foundry](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/how-to/use-foundry-models-grok), then set these server-only environment variables in `.env.local` for local development and in Vercel for deployment. Never prefix the credentials with `VITE_`:
-
-```dotenv
-AZURE_FOUNDRY_ENDPOINT=https://YOUR_RESOURCE.services.ai.azure.com
-AZURE_FOUNDRY_API_KEY=...
-AZURE_FOUNDRY_DEPLOYMENT=grok-4.6
-ELEVENLABS_API_KEY=...
-```
-
-`AZURE_FOUNDRY_ENDPOINT` can be the resource endpoint shown in Foundry, the `/openai/v1` base URL, or the full `/openai/v1/chat/completions` endpoint. Set `AZURE_FOUNDRY_DEPLOYMENT` to the deployment name shown in Foundry; it defaults to `grok-4.6`. The server calls Azure Foundry's OpenAI-compatible Chat Completions API using the `api-key` header and sets `reasoning_effort` to `high`. The Vercel guide function allows up to 55 seconds for a response. Grok 4.6 is currently a preview model. Azure receives the recognized question, selected approximate area, language, up to eight public event listings, and short-term conversation history; it does not receive member profiles or precise coordinates.
-
-Create an ElevenLabs personal API key with text-to-speech permission only and set it as `ELEVENLABS_API_KEY`. The server sends only Grok's short reply to ElevenLabs and plays the returned audio. If ElevenLabs is unavailable, the browser's built-in voice reads the same answer. Keep automatic top-up disabled if you do not want the ElevenLabs account to buy more credits. See [ElevenLabs API keys](https://elevenlabs.io/docs/overview/administration/workspaces/api-keys) and [text-to-speech API](https://elevenlabs.io/docs/api-reference/text-to-speech/stream).
-
-The selected site language is used for browser speech recognition and sent to Grok for its spoken answer. Recognized words stay in short-term browser memory to support follow-up questions; LocalLoops does not display or save a transcript. The browser's speech service processes microphone audio, Azure Foundry processes the question and supplied context, and ElevenLabs processes the generated reply when configured.
-
-## Translate the site
-
-LocalLoops defaults to English. The language picker includes the bundled English, Spanish, French, Portuguese, Simplified Chinese, Hindi, and Vietnamese interface translations. They are stored with the app, so changing the interface language needs no translation API, key, billing account, or network request. The translated interface covers the text included in the offline catalogs; new interface copy must be added to those catalogs.
-
-Event listings, event descriptions, community posts, member names, pickup notes, and private messages remain in the language they were written or supplied in. The language picker does not translate arbitrary user or event-provider content.
-
-## Deploy to Vercel
-
-Import this repository into Vercel with the Vite framework preset. Add the Supabase URL, publishable key, and matching project ref as `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and `VITE_SUPABASE_PROJECT_REF`, then add event-provider and voice keys as server-only variables. Apply the Supabase migrations and set Auth redirect URLs before inviting members. Vercel builds the Vite app and deploys the `api/` handlers as serverless functions.
-
-## Scope
-
-LocalLoops has email/password sign-in, profiles, opt-in member discovery, connection requests, accepted-connection messages, public community events, and shared “I'm going” attendance. The large sprout character is Leafy, the voice guide. The guide uses Azure AI Foundry with Grok 4.6 for spoken questions and answers, and ElevenLabs for speech synthesis; browser speech recognition and speech synthesis provide browser-side voice support.
