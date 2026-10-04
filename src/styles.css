@@ -59,21 +59,6 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-home-hero__copy h1 { max-width: 570px; font-size: clamp(34px, 4vw, 48px); }
 .greet-home-hero__intro { max-width: 510px; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
 .greet-home-hero__copy > .greet-button { margin-top: 19px; }
-.greet-guide-preview { min-width: 0; min-height: 292px; position: relative; overflow: hidden; padding: 18px 20px 13px; border: 1px solid #dce6d7; border-radius: 22px; background: radial-gradient(circle at 87% 65%, rgba(226,238,220,.9) 0 24%, transparent 24.5%), linear-gradient(125deg,#eff3e9,#f7f0df); box-shadow: 0 14px 38px rgba(39,55,43,.055); }
-.greet-guide-preview__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.greet-guide-preview__header > div { display: grid; gap: 5px; }
-.greet-guide-preview__eyebrow { display: inline-flex; align-items: center; gap: 6px; color: var(--forest); font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.greet-guide-preview__eyebrow svg { color: #d9915d; }
-.greet-guide-preview__header strong { color: #243b2e; font: 750 16px/1.2 "Manrope", sans-serif; letter-spacing: -.025em; }
-.greet-guide-preview__badge { flex: 0 0 auto; padding: 5px 9px; border: 1px solid rgba(198,215,196,.9); border-radius: 999px; color: #58705a; background: rgba(255,254,250,.7); font-size: 8px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
-.greet-guide-preview__body { min-height: 193px; display: grid; grid-template-columns: minmax(0,1fr) minmax(120px,34%); align-items: end; gap: 4px; margin-top: 5px; }
-.greet-guide-preview__thread { min-width: 0; position: relative; z-index: 1; display: grid; align-content: center; gap: 9px; padding-bottom: 4px; }
-.greet-guide-preview__user { max-width: 285px; justify-self: end; margin: 0; padding: 10px 12px; border-radius: 15px 15px 4px 15px; color: #fff; background: var(--forest); box-shadow: 0 6px 16px rgba(34,76,53,.12); font-size: 12px; line-height: 1.45; }
-.greet-guide-preview__reply { max-width: 330px; padding: 10px 12px 11px; border: 1px solid rgba(221,229,216,.95); border-radius: 15px 15px 15px 4px; background: rgba(255,254,250,.9); box-shadow: 0 5px 14px rgba(41,59,43,.045); }
-.greet-guide-preview__reply > span { color: var(--forest); font-size: 8px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
-.greet-guide-preview__reply p { margin: 4px 0 0; color: #536459; font-size: 12px; line-height: 1.45; }
-.greet-guide-preview__body > img { width: 100%; max-height: 211px; align-self: end; margin-bottom: -11px; object-fit: contain; object-position: center bottom; filter: drop-shadow(0 10px 13px rgba(60,70,48,.12)); }
-.greet-guide-preview__footnote { margin: 8px 0 0; padding-top: 9px; border-top: 1px solid rgba(217,227,213,.8); color: #718075; font-size: 9px; line-height: 1.4; }
 .greet-button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 14px; border: 1px solid transparent; border-radius: 12px; font-size: 12px; font-weight: 720; cursor: pointer; transition: .16s ease; white-space: nowrap; text-decoration: none; }
 .greet-button:hover:not(:disabled) { transform: translateY(-1px); }
 .greet-button--primary { border-color: var(--forest); background: var(--forest); color: #fff; }
@@ -173,13 +158,14 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-empty-events strong { color: var(--ink); font-size: 13px; }
 .greet-empty-events > span:last-child { max-width: 330px; color: var(--muted); font-size: 11px; line-height: 1.55; }
 .greet-loading { display: flex; align-items: center; justify-content: center; min-height: 140px; color: #65766a; font-size: 12px; }
-.greet-guide-card { min-height: 300px; position: relative; overflow: hidden; display: flex; align-items: center; margin-top: 22px; padding: 26px 31px; border: 1px solid #dfe7d9; border-radius: 23px; background: radial-gradient(circle at 86% 50%, #e4eddf 0 19%, transparent 19.5%), linear-gradient(112deg,#edf2e9,#f6f0df); }
-.greet-guide-card__copy { width: min(61%, 590px); position: relative; z-index: 2; }
+.greet-guide-card { min-width: 0; min-height: 300px; position: relative; overflow: hidden; display: flex; align-items: center; margin-top: 0; padding: 26px 27px; border: 1px solid #dfe7d9; border-radius: 23px; background: radial-gradient(circle at 86% 50%, #e4eddf 0 19%, transparent 19.5%), linear-gradient(112deg,#edf2e9,#f6f0df); }
+.greet-guide-card__copy { width: min(72%, 590px); position: relative; z-index: 2; }
 .greet-guide-card__kicker { display: inline-flex; align-items: center; gap: 7px; color: var(--forest); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .greet-guide-card__kicker svg { color: #d9915d; }
 .greet-guide-card h2 { max-width: 470px; margin: 11px 0 9px; color: #1d382a; font-size: clamp(22px, 2.6vw, 31px); line-height: 1.12; }
 .greet-guide-card p { max-width: 470px; margin: 0; color: #637065; font-size: 12px; line-height: 1.65; }
 .greet-guide-card .greet-guide-language-note { max-width: 430px; margin: 8px 0 0; color: #6a776d; font-size: 10px; line-height: 1.45; }
+.greet-guide-card .greet-guide-privacy { max-width: 370px; margin-top: 5px; color: #718075; font-size: 9px; line-height: 1.4; }
 .greet-guide-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .greet-guide-controls .greet-button { min-height: 40px; }
 .greet-guide-controls .greet-button--quiet { border: 1px solid #d9e2d6; color: #395542; background: rgba(255,254,250,.82); }
@@ -575,17 +561,6 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
   .greet-page { width: calc(100% - 26px); }
   .greet-home-hero__copy h1 { font-size: 29px; }
   .greet-home-hero__intro { font-size: 11px; }
-  .greet-guide-preview { min-height: 260px; padding: 14px 13px 11px; border-radius: 18px; }
-  .greet-guide-preview__header strong { font-size: 14px; }
-  .greet-guide-preview__badge { padding: 4px 7px; font-size: 7px; }
-  .greet-guide-preview__body { min-height: 173px; grid-template-columns: minmax(0,1fr) 90px; gap: 1px; }
-  .greet-guide-preview__thread { gap: 7px; }
-  .greet-guide-preview__user { padding: 8px 9px; font-size: 10px; }
-  .greet-guide-preview__reply { padding: 8px 9px; }
-  .greet-guide-preview__reply > span { font-size: 7px; }
-  .greet-guide-preview__reply p { font-size: 10px; }
-  .greet-guide-preview__body > img { max-height: 180px; }
-  .greet-guide-preview__footnote { font-size: 8px; }
   .greet-location-search > svg { width: 17px; }
   .greet-location-search input { padding: 0 2px; font-size: 10px; }
   .greet-location-search .greet-button { min-height: 35px; padding: 0 8px; font-size: 9px; }
