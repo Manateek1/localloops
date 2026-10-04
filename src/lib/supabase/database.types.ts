@@ -20,6 +20,7 @@ export type ProfileRow = {
 export type EventRow = {
   id: string
   host_id: string
+  community_id: string | null
   title: string
   description: string
   starts_at: string
@@ -35,6 +36,23 @@ export type EventRow = {
   source_name: string | null
   source_url: string | null
   created_at: string
+}
+
+export type CommunityRow = {
+  id: string
+  name: string
+  description: string
+  region_label: string | null
+  created_by: string
+  member_count: number
+  created_at: string
+}
+
+export type CommunityMemberRow = {
+  community_id: string
+  user_id: string
+  role: 'owner' | 'member'
+  joined_at: string
 }
 
 export type EventRsvpRow = {
@@ -104,6 +122,8 @@ export type Database = {
   public: {
     Tables: {
       profiles: TableShape<ProfileRow>
+      communities: TableShape<CommunityRow>
+      community_members: TableShape<CommunityMemberRow>
       events: TableShape<EventRow>
       event_rsvps: TableShape<EventRsvpRow>
       external_event_rsvps: TableShape<ExternalEventRsvpRow>
@@ -114,7 +134,20 @@ export type Database = {
       notifications: TableShape<NotificationRow>
     }
     Views: Record<never, never>
-    Functions: Record<never, never>
+    Functions: {
+      create_community: {
+        Args: { p_name: string; p_description: string; p_region_label: string | null }
+        Returns: string
+      }
+      join_community: {
+        Args: { p_community_id: string }
+        Returns: number
+      }
+      leave_community: {
+        Args: { p_community_id: string }
+        Returns: number
+      }
+    }
     Enums: Record<never, never>
     CompositeTypes: Record<never, never>
   }
