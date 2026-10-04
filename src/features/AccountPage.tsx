@@ -63,8 +63,8 @@ export function AccountPage({ client, userId, profile, onSave }: AccountPageProp
 
       onSave(result.data as Profile)
       setMessage('Your profile is up to date.')
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'We could not save your profile.')
+    } catch {
+      setError('We could not save your profile. Check your connection and try again.')
     } finally {
       setBusy(false)
     }
@@ -87,7 +87,7 @@ export function AccountPage({ client, userId, profile, onSave }: AccountPageProp
         </div></fieldset>
         <button className="greet-privacy-toggle" type="button" onClick={() => setDiscoverable((value) => !value)} aria-pressed={discoverable}>
           {discoverable ? <Eye size={18} /> : <EyeOff size={18} />}
-          <span><strong>{discoverable ? 'Show me in Community' : 'Keep my profile private'}</strong><small>{discoverable ? 'Signed-in members can see your name, broad region, bio, and interests.' : 'Only you can see your profile details.'}</small></span>
+          <span><strong>{discoverable ? 'Show me in Community' : 'Keep my profile private'}</strong><small>{discoverable ? 'Signed-in members can see your name, broad region, bio, and interests.' : 'Only you and accepted friends can see your profile details.'}</small></span>
           <span className={`greet-switch ${discoverable ? 'is-on' : ''}`} aria-hidden="true"><i /></span>
         </button>
         {error && <p className="greet-form-message is-error" role="alert">{error}</p>}

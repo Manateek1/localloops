@@ -193,6 +193,7 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-community-tabs button, .greet-community-subtabs button { min-height: 39px; display: inline-flex; align-items: center; gap: 7px; padding: 0 13px; border: 1px solid transparent; border-radius: 11px; color: #657269; background: transparent; font-size: 12px; font-weight: 650; cursor: pointer; }
 .greet-community-tabs button.is-active, .greet-community-subtabs button.is-active { border-color: #dce5d8; color: var(--forest); background: #e9eee5; font-weight: 750; }
 .greet-community-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin: 0 0 16px; }
+.greet-people-subtabs { margin: -5px 0 14px; }
 .greet-community-subtabs button span { min-width: 20px; height: 20px; display: inline-grid; place-items: center; padding: 0 5px; border-radius: 999px; color: #526452; background: #fffefa; font-size: 9px; }
 .greet-community-create, .greet-community-detail { margin: 0 0 19px; padding: 22px; border: 1px solid #dfe5dc; border-radius: 19px; background: var(--surface); box-shadow: 0 8px 25px rgba(39,55,43,.035); }
 .greet-community-create__heading, .greet-community-events-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; }

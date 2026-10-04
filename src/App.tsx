@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
+import { MessageCircle } from 'lucide-react'
 import { BottomNav, Header, type Page } from './components/Navigation'
 import { AccountPage } from './features/AccountPage'
 import { AgentPage } from './features/AgentPage'
@@ -44,6 +45,7 @@ function App() {
   const [locationError, setLocationError] = useState('')
   const [feedLoading, setFeedLoading] = useState(false)
   const [socialLoading, setSocialLoading] = useState(false)
+  const [socialError, setSocialError] = useState('')
   const [socialRefresh, setSocialRefresh] = useState(0)
   const [discoverableProfiles, setDiscoverableProfiles] = useState<Profile[]>([])
   const [friendships, setFriendships] = useState<FriendshipRow[]>([])
@@ -56,6 +58,7 @@ function App() {
   const [ridePosts, setRidePosts] = useState<RidePlan[]>([])
   const [eventBusy, setEventBusy] = useState(false)
   const [messageSending, setMessageSending] = useState(false)
+  const messageSendingRef = useRef(false)
   const [toast, setToast] = useState('')
 
   useEffect(() => {
@@ -155,12 +158,21 @@ function App() {
   }, [location, radius])
 
   useEffect(() => {
-    if (!supabaseClient || !user || !['community', 'inbox', 'messages'].includes(page)) {
+    if (!supabaseClient || !user) {
+      setSocialLoading(false)
+      setSocialError('')
+      setDiscoverableProfiles([])
+      setFriendships([])
+      setMessages([])
+      return
+    }
+    if (!['community', 'inbox', 'messages'].includes(page)) {
       setSocialLoading(false)
       return
     }
     let active = true
     setSocialLoading(true)
+    setSocialError('')
     const client = supabaseClient
     const load = async () => {
       let profileQuery = client.from('localloops_profiles').select('*').eq('discoverable', true).neq('id', user.id)
@@ -169,34 +181,70 @@ function App() {
         profileQuery.order('created_at', { ascending: false }).limit(100),
         client.from('localloops_friendships').select('*').or('requester_id.eq.' + user.id + ',addressee_id.eq.' + user.id).order('created_at', { ascending: false }),
       ])
+      if (profileResult.error) throw profileResult.error
+      if (friendshipResult.error) throw friendshipResult.error
       if (!active) return
       const realProfiles = (profileResult.data ?? []) as ProfileRow[]
       const relationRows = (friendshipResult.data ?? []) as FriendshipRow[]
       setFriendships(relationRows)
       const linkedProfileIds = [...new Set(relationRows.flatMap((row) => [row.requester_id, row.addressee_id]).filter((id) => id !== user.id))]
-      const { data: linkedProfiles } = linkedProfileIds.length
+      const linkedProfileResult = linkedProfileIds.length
         ? await client.from('localloops_profiles').select('*').in('id', linkedProfileIds)
-        : { data: [] }
+        : { data: [], error: null }
+      if (linkedProfileResult.error) throw linkedProfileResult.error
+      if (!active) return
       const profilesById = new Map<string, ProfileRow>()
-      ;[...realProfiles, ...((linkedProfiles ?? []) as ProfileRow[])].forEach((item) => profilesById.set(item.id, item))
+      ;[...realProfiles, ...((linkedProfileResult.data ?? []) as ProfileRow[])].forEach((item) => profilesById.set(item.id, item))
       setDiscoverableProfiles([...profilesById.values()])
       const threadIds = relationRows.filter((row) => row.status === 'accepted').map((row) => row.id)
       if (!threadIds.length) {
         setMessages([])
         return
       }
-      const { data: messageRows } = await client.from('localloops_messages').select('*').in('friendship_id', threadIds).order('created_at', { ascending: true }).limit(500)
-      if (active) setMessages((messageRows ?? []) as MessageRow[])
+      const { data: messageRows, error: messageError } = await client.from('localloops_messages').select('*')
+        .in('friendship_id', threadIds)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(500)
+      if (messageError) throw messageError
+      if (active) setMessages(((messageRows ?? []) as MessageRow[]).reverse())
     }
     void load().catch(() => {
-      if (active) {
-        setDiscoverableProfiles([])
-        setFriendships([])
-        setMessages([])
-      }
+      if (active) setSocialError('Your people, requests, and messages could not load. Check your connection and try again.')
     }).finally(() => { if (active) setSocialLoading(false) })
     return () => { active = false }
   }, [user?.id, page, socialRefresh, location?.stateCode])
+
+  useEffect(() => {
+    if (!supabaseClient || !user || !['community', 'inbox', 'messages'].includes(page)) return
+    const client = supabaseClient
+    const refreshRelationships = () => setSocialRefresh((value) => value + 1)
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refreshRelationships()
+    }
+    const channel = client.channel('localloops-social:' + user.id)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'localloops_friendships' }, refreshRelationships)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'localloops_friendships' }, refreshRelationships)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'localloops_messages' }, (payload) => {
+        const message = payload.new as MessageRow
+        if (!message.id || !message.friendship_id) return
+        setMessages((current) => {
+          const next = [...current.filter((item) => item.id !== message.id), message]
+            .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id))
+          return next.slice(-500)
+        })
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') setSocialRefresh((value) => value + 1)
+      })
+    window.addEventListener('focus', refreshRelationships)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    return () => {
+      window.removeEventListener('focus', refreshRelationships)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+      void client.removeChannel(channel)
+    }
+  }, [user?.id, page])
 
   useEffect(() => {
     if (!toast) return
@@ -226,10 +274,7 @@ function App() {
   const notify = (message: string) => setToast(message)
 
   const openSignIn = () => setAuthOpen(true)
-  const navigate = (nextPage: Page) => {
-    setPage(nextPage)
-    if (nextPage === 'messages' && !selectedThreadId) setPage('inbox')
-  }
+  const navigate = (nextPage: Page) => setPage(nextPage === 'messages' && !selectedThreadId ? 'inbox' : nextPage)
 
   const submitLocation = async (query: string) => {
     setLocationQuery(query)
@@ -258,29 +303,50 @@ function App() {
       (item.requester_id === user.id && item.addressee_id === profileId)
       || (item.requester_id === profileId && item.addressee_id === user.id))
     if (existing) return
-    const { error } = await supabaseClient.from('localloops_friendships').insert({ requester_id: user.id, addressee_id: profileId })
-    if (error) notify(error.message)
-    else {
-      notify('Your hello is on its way.')
+    try {
+      const { data, error } = await supabaseClient.rpc('localloops_send_connection_request', { p_addressee_id: profileId })
+      if (error || !data) {
+        notify('Your connection request could not be sent. Please try again.')
+        refreshSocial()
+        return
+      }
+      notify('Your connection is updated.')
       refreshSocial()
+    } catch {
+      notify('Your connection request could not be sent. Please try again.')
     }
   }
 
   const acceptConnectionRequest = async (friendshipId: string) => {
     if (!supabaseClient || !user) return
-    const { error } = await supabaseClient.from('localloops_friendships').update({ status: 'accepted', accepted_at: new Date().toISOString() }).eq('id', friendshipId).eq('addressee_id', user.id)
-    if (error) notify(error.message)
-    else {
+    try {
+      const { data, error } = await supabaseClient.from('localloops_friendships')
+        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+        .eq('id', friendshipId).eq('addressee_id', user.id).select('id').maybeSingle()
+      if (error || !data) {
+        notify('That connection request could not be accepted. Refresh and try again.')
+        refreshSocial()
+        return
+      }
       notify('You’re connected. A conversation is ready when you are.')
       refreshSocial()
+    } catch {
+      notify('That connection request could not be accepted. Please try again.')
     }
   }
 
   const dismissConnectionRequest = async (friendshipId: string) => {
     if (!supabaseClient || !user) return
-    const { error } = await supabaseClient.from('localloops_friendships').delete().eq('id', friendshipId)
-    if (error) notify(error.message)
-    else refreshSocial()
+    try {
+      const { data, error } = await supabaseClient.from('localloops_friendships').delete().eq('id', friendshipId).select('id').maybeSingle()
+      if (error || !data) {
+        notify('That connection request could not be dismissed. Please try again.')
+        return
+      }
+      refreshSocial()
+    } catch {
+      notify('That connection request could not be dismissed. Please try again.')
+    }
   }
 
   const openThread = (friendshipId: string) => {
@@ -289,16 +355,30 @@ function App() {
   }
 
   const sendMessage = async (text: string): Promise<boolean> => {
-    if (!supabaseClient || !user || !selectedThreadId) return false
+    if (!supabaseClient || !user || !selectedThreadId || messageSendingRef.current) return false
+    messageSendingRef.current = true
     setMessageSending(true)
-    const { error } = await supabaseClient.from('localloops_messages').insert({ friendship_id: selectedThreadId, sender_id: user.id, body: text })
-    setMessageSending(false)
-    if (error) {
-      notify(error.message)
+    try {
+      const { data, error } = await supabaseClient.from('localloops_messages')
+        .insert({ friendship_id: selectedThreadId, sender_id: user.id, body: text.trim() })
+        .select('*').single()
+      if (error || !data) {
+        notify('Your message could not be sent. Please try again.')
+        return false
+      }
+      setMessages((current) => {
+        const next = [...current.filter((item) => item.id !== data.id), data]
+          .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id))
+        return next.slice(-500)
+      })
+      return true
+    } catch {
+      notify('Your message could not be sent. Please try again.')
       return false
+    } finally {
+      messageSendingRef.current = false
+      setMessageSending(false)
     }
-    refreshSocial()
-    return true
   }
 
   const loadEventSocial = useCallback(async () => {
@@ -412,11 +492,17 @@ function App() {
       (item.requester_id === user.id && item.addressee_id === memberId)
       || (item.addressee_id === user.id && item.requester_id === memberId))
     if (existing) return
-    const { error } = await supabaseClient.from('localloops_friendships').insert({ requester_id: user.id, addressee_id: memberId })
-    if (error) notify(error.message)
-    else {
-      notify('Your hello is on its way.')
+    try {
+      const { data, error } = await supabaseClient.rpc('localloops_send_connection_request', { p_addressee_id: memberId })
+      if (error || !data) {
+        notify('Your connection request could not be sent. Please try again.')
+        return
+      }
+      notify('Your connection is updated.')
       await loadEventSocial()
+      refreshSocial()
+    } catch {
+      notify('Your connection request could not be sent. Please try again.')
     }
   }
 
@@ -457,7 +543,7 @@ function App() {
   }
 
   const userName = profile?.display_name ?? (user?.email ? user.email.split('@')[0] : null)
-  const isMessagePage = page === 'messages'
+  const isMessagePage = page === 'messages' && Boolean(selectedThread && user)
   const threadMessageList = threadMessages
   const eventModalClient = supabaseClient
 
@@ -511,8 +597,10 @@ function App() {
           userId={user?.id ?? null}
           stateCode={location?.stateCode ?? null}
           loading={socialLoading}
+          error={socialError}
+          onRetry={refreshSocial}
           profile={profile}
-          onRequest={(profileId) => void sendConnectionRequest(profileId)}
+          onRequest={sendConnectionRequest}
           onAccept={(friendshipId) => void acceptConnectionRequest(friendshipId)}
           onMessage={openThread}
           onCreateEvent={(communityId) => openEventComposer(communityId)}
@@ -535,6 +623,8 @@ function App() {
           messages={messages}
           profilesById={profilesById}
           loading={socialLoading}
+          error={socialError}
+          onRetry={refreshSocial}
           onOpenMessage={openThread}
           onAccept={(friendshipId) => void acceptConnectionRequest(friendshipId)}
           onDismiss={(friendshipId) => void dismissConnectionRequest(friendshipId)}
@@ -548,6 +638,9 @@ function App() {
           onBack={() => setPage('inbox')}
           onSend={sendMessage}
         />}
+        {page === 'messages' && (!selectedThread || !user) && <section className="greet-page">
+          <div className="greet-empty-card"><div className="greet-empty-card__icon"><MessageCircle size={21} /></div><h2>That conversation is unavailable.</h2><p>Choose an accepted connection from your inbox to open a private conversation.</p><button className="greet-button greet-button--outline" type="button" onClick={() => setPage('inbox')}>Back to inbox</button></div>
+        </section>}
         {page === 'account' && user && <AccountPage
           client={supabaseClient}
           userId={user.id}

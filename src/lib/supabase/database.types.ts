@@ -151,6 +151,10 @@ export type Database = {
         Args: { p_community_id: string }
         Returns: number
       }
+      localloops_send_connection_request: {
+        Args: { p_addressee_id: string }
+        Returns: string
+      }
     }
     Enums: Record<never, never>
     CompositeTypes: Record<never, never>

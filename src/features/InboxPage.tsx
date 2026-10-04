@@ -9,13 +9,15 @@ type InboxPageProps = {
   messages: MessageRow[]
   profilesById: Map<string, Profile>
   loading: boolean
+  error: string
+  onRetry: () => void
   onOpenMessage: (friendshipId: string) => void
   onAccept: (friendshipId: string) => void
   onDismiss: (friendshipId: string) => void
   onSignIn: () => void
 }
 
-export function InboxPage({ userId, friendships, messages, profilesById, loading, onOpenMessage, onAccept, onDismiss, onSignIn }: InboxPageProps) {
+export function InboxPage({ userId, friendships, messages, profilesById, loading, error, onRetry, onOpenMessage, onAccept, onDismiss, onSignIn }: InboxPageProps) {
   const [tab, setTab] = useState<'messages' | 'requests'>('messages')
   const accepted = friendships.filter((friendship) => friendship.status === 'accepted')
   const incoming = friendships.filter((friendship) => friendship.status === 'pending' && friendship.addressee_id === userId)
@@ -40,7 +42,7 @@ export function InboxPage({ userId, friendships, messages, profilesById, loading
             <button type="button" role="tab" aria-selected={tab === 'messages'} className={tab === 'messages' ? 'is-active' : ''} onClick={() => setTab('messages')}>Messages <span>{accepted.length}</span></button>
             <button type="button" role="tab" aria-selected={tab === 'requests'} className={tab === 'requests' ? 'is-active' : ''} onClick={() => setTab('requests')}>Requests <span>{incoming.length}</span></button>
           </div>
-          {loading ? <div className="greet-loading" role="status">Loading your inbox…</div> : tab === 'messages' ? (
+          {loading ? <div className="greet-loading" role="status">Loading your inbox…</div> : error ? <div className="greet-empty-inbox" role="alert"><MessageCircle size={25} /><h2>Your inbox could not load.</h2><p>{error}</p><button className="greet-button greet-button--outline" type="button" onClick={onRetry}>Try again</button></div> : tab === 'messages' ? (
             conversations.length ? <div className="greet-conversation-list">{conversations.map(({ friendship, name, latest }) => (
               <button className="greet-conversation" type="button" key={friendship.id} onClick={() => onOpenMessage(friendship.id)}>
                 <span className="greet-member-avatar greet-member-avatar--initials" aria-hidden="true">{name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'N'}</span>
