@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { BottomNav, Header, type Page } from './components/Navigation'
 import { AccountPage } from './features/AccountPage'
+import { AgentPage } from './features/AgentPage'
 import { AuthModal } from './features/AuthModal'
 import { CommunityPage } from './features/CommunityPage'
 import { CreateEventModal } from './features/CreateEventModal'
@@ -480,6 +481,32 @@ function App() {
           onOpenEvent={openEvent}
           onSignIn={openSignIn}
         />}
+        {page === 'agent' && (
+          <AgentPage
+            profile={profile}
+            events={events}
+            neighbors={discoverableProfiles}
+            onOpenEvent={openEvent}
+            onConnectNeighbor={(neighborId) => {
+              if (!user) {
+                openSignIn()
+              } else {
+                void sendConnectionRequest(neighborId)
+                setToast('Connection request sent to neighbor!')
+              }
+            }}
+            onUpdateInterests={(interests) => {
+              if (profile && supabaseClient && user) {
+                void supabaseClient
+                  .from('profiles')
+                  .update({ interests } as any)
+                  .eq('id', user.id)
+                  .then(() => setProfileRefresh((v) => v + 1))
+              }
+            }}
+            onSignIn={openSignIn}
+          />
+        )}
         {page === 'inbox' && <InboxPage
           userId={user?.id ?? null}
           friendships={friendships}

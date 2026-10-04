@@ -1,8 +1,8 @@
-import { Compass, MessageCircle, UserRound, Users } from 'lucide-react'
+import { AudioLines, Compass, MessageCircle, UserRound, Users } from 'lucide-react'
 import { Brand } from './Brand'
 import { LanguagePicker } from '../features/LanguageProvider'
 
-export type Page = 'explore' | 'community' | 'inbox' | 'account' | 'event' | 'messages'
+export type Page = 'explore' | 'community' | 'agent' | 'inbox' | 'account' | 'event' | 'messages'
 
 type NavigationProps = {
   page: Page
@@ -15,6 +15,7 @@ type NavigationProps = {
 const items = [
   { page: 'explore' as const, label: 'Explore', Icon: Compass },
   { page: 'community' as const, label: 'Community', Icon: Users },
+  { page: 'agent' as const, label: 'Sprout AI', Icon: AudioLines },
   { page: 'inbox' as const, label: 'Inbox', Icon: MessageCircle },
 ]
 
