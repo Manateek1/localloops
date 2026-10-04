@@ -358,7 +358,7 @@ export function TranslationNotice() {
 
   return (
     <div className="greet-translation-notice" role="status" aria-live="polite">
-      {translationStatus || 'Google translates public page and event text. Member details, pickup notes, and private messages are not sent.'}
+      {translationStatus || 'Google translates public page and event text. Member details and private messages are not sent.'}
     </div>
   )
 }

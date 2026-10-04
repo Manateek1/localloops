@@ -7,7 +7,7 @@ import { AgentPage } from './features/AgentPage'
 import { AuthModal } from './features/AuthModal'
 import { CommunityPage } from './features/CommunityPage'
 import { CreateEventModal } from './features/CreateEventModal'
-import { EventDetail, type RidePlan } from './features/EventDetail'
+import { EventDetail } from './features/EventDetail'
 import { ExplorePage } from './features/ExplorePage'
 import { InboxPage } from './features/InboxPage'
 import { MessagesPage } from './features/MessagesPage'
@@ -54,8 +54,6 @@ function App() {
   const [selectedEvent, setSelectedEvent] = useState<CommunityEvent | null>(null)
   const [going, setGoing] = useState(false)
   const [attendees, setAttendees] = useState<EventAttendee[]>([])
-  const [ridePost, setRidePost] = useState<RidePlan | null>(null)
-  const [ridePosts, setRidePosts] = useState<RidePlan[]>([])
   const [eventBusy, setEventBusy] = useState(false)
   const [messageSending, setMessageSending] = useState(false)
   const messageSendingRef = useRef(false)
@@ -385,29 +383,23 @@ function App() {
     if (!supabaseClient || !selectedEvent || !user) {
       setGoing(false)
       setAttendees([])
-      setRidePost(null)
-      setRidePosts([])
       return
     }
     const event = selectedEvent
     const isCommunity = event.source === 'community' && Boolean(event.communityEventId)
-    const [rsvpResult, attendanceResult, rideResult, friendshipResult] = await Promise.all([
+    const [rsvpResult, attendanceResult, friendshipResult] = await Promise.all([
       isCommunity
         ? supabaseClient.from('localloops_event_rsvps').select('event_id,user_id,status,created_at').eq('event_id', event.communityEventId!).eq('user_id', user.id).maybeSingle()
         : supabaseClient.from('localloops_external_event_rsvps').select('event_source,source_event_id,user_id,status,created_at').eq('event_source', event.source as Exclude<EventSource, 'community'>).eq('source_event_id', event.sourceId).eq('user_id', user.id).maybeSingle(),
       isCommunity
         ? supabaseClient.from('localloops_event_rsvps').select('user_id,status').eq('event_id', event.communityEventId!).eq('status', 'going').limit(1000)
         : supabaseClient.from('localloops_external_event_rsvps').select('user_id,status').eq('event_source', event.source as Exclude<EventSource, 'community'>).eq('source_event_id', event.sourceId).eq('status', 'going').limit(1000),
-      isCommunity
-        ? supabaseClient.from('localloops_ride_posts').select('id,event_id,user_id,kind,pickup_area,seats_available,created_at').eq('event_id', event.communityEventId!)
-        : supabaseClient.from('localloops_external_ride_posts').select('id,event_source,source_event_id,user_id,kind,pickup_area,seats_available,created_at').eq('event_source', event.source as Exclude<EventSource, 'community'>).eq('source_event_id', event.sourceId),
       supabaseClient.from('localloops_friendships').select('*').or('requester_id.eq.' + user.id + ',addressee_id.eq.' + user.id).order('created_at', { ascending: false }),
     ])
     setGoing(rsvpResult.data?.status === 'going')
-    if (attendanceResult.error) notify('Shared attendance needs the latest LocalLoops database migration.')
-    const rideRows = rideResult.data ?? []
+    if (rsvpResult.error || attendanceResult.error) notify('Event attendance is temporarily unavailable. Please try again.')
     const attendanceRows = attendanceResult.data ?? []
-    const memberIds = [...new Set([...rideRows.map((row: any) => row.user_id), ...attendanceRows.map((row) => row.user_id)])]
+    const memberIds = [...new Set(attendanceRows.map((row) => row.user_id))]
     const { data: memberProfiles } = memberIds.length
       ? await supabaseClient.from('localloops_profiles').select('id,display_name').in('id', memberIds)
       : { data: [] }
@@ -416,26 +408,13 @@ function App() {
       userId: row.user_id,
       displayName: row.user_id === user.id ? 'You' : namesById.get(row.user_id),
     })))
-    const rides = rideRows.map((row: any) => ({
-      id: row.id ?? row.user_id,
-      user_id: row.user_id,
-      event_source: row.event_source ?? null,
-      kind: row.kind,
-      pickup_area: row.pickup_area,
-      seats_available: row.seats_available,
-      display_name: namesById.get(row.user_id),
-    })) as RidePlan[]
     setFriendships((friendshipResult.data ?? []) as FriendshipRow[])
-    setRidePosts(rides)
-    setRidePost(rides.find((item) => item.user_id === user.id) ?? null)
   }, [selectedEvent, user?.id])
 
   useEffect(() => {
     if (page !== 'event') return
     void loadEventSocial().catch(() => {
       setGoing(false)
-      setRidePost(null)
-      setRidePosts([])
     })
   }, [page, loadEventSocial])
 
@@ -452,7 +431,7 @@ function App() {
         ? await supabaseClient.from('localloops_external_event_rsvps').upsert({ event_source: event.source as Exclude<EventSource, 'community'>, source_event_id: event.sourceId, user_id: user.id, status: 'going' }, { onConflict: 'event_source,source_event_id,user_id' })
         : await supabaseClient.from('localloops_external_event_rsvps').delete().eq('event_source', event.source as Exclude<EventSource, 'community'>).eq('source_event_id', event.sourceId).eq('user_id', user.id)
     setEventBusy(false)
-    if (result.error) notify(result.error.message)
+    if (result.error) notify('Your attendance could not be updated. Please try again.')
     else {
       setGoing(nextGoing)
       await loadEventSocial()
@@ -465,28 +444,7 @@ function App() {
     }
   }
 
-  const saveRidePlan = async (kind: 'request' | 'offer', pickupArea: string, seats: number | null): Promise<boolean> => {
-    if (!supabaseClient || !user || !selectedEvent) {
-      openSignIn()
-      return false
-    }
-    setEventBusy(true)
-    const event = selectedEvent
-    const isCommunity = event.source === 'community' && Boolean(event.communityEventId)
-    const result = isCommunity
-      ? await supabaseClient.from('localloops_ride_posts').upsert({ event_id: event.communityEventId!, user_id: user.id, kind, pickup_area: pickupArea, seats_available: seats }, { onConflict: 'event_id,user_id' }).select('*').single()
-      : await supabaseClient.from('localloops_external_ride_posts').upsert({ event_source: event.source as Exclude<EventSource, 'community'>, source_event_id: event.sourceId, user_id: user.id, kind, pickup_area: pickupArea, seats_available: seats }, { onConflict: 'event_source,source_event_id,user_id' }).select('*').single()
-    setEventBusy(false)
-    if (result.error || !result.data) {
-      notify(result.error?.message ?? 'We could not save your ride plan.')
-      return false
-    }
-    await loadEventSocial()
-    notify('Your ride plan is saved.')
-    return true
-  }
-
-  const connectFromRidePlan = async (memberId: string) => {
+  const connectFromEventAttendee = async (memberId: string) => {
     if (!supabaseClient || !user) return openSignIn()
     const existing = friendships.find((item) =>
       (item.requester_id === user.id && item.addressee_id === memberId)
@@ -506,7 +464,7 @@ function App() {
     }
   }
 
-  const acceptRideConnection = async (friendshipId: string) => {
+  const acceptEventAttendeeConnection = async (friendshipId: string) => {
     await acceptConnectionRequest(friendshipId)
     await loadEventSocial()
   }
@@ -576,18 +534,14 @@ function App() {
           event={selectedEvent}
           going={going}
           attendees={attendees}
-          ridePost={ridePost}
-          ridePosts={ridePosts}
           friendships={friendships}
           userId={user?.id ?? null}
           signedIn={Boolean(user)}
           busy={eventBusy}
           onBack={() => setPage('explore')}
           onRsvp={toggleRsvp}
-          onRide={saveRidePlan}
-          onSayHello={(memberId) => void connectFromRidePlan(memberId)}
-          onAcceptConnection={(friendshipId) => void acceptRideConnection(friendshipId)}
-          onMessage={openThread}
+          onSayHello={(memberId) => void connectFromEventAttendee(memberId)}
+          onAcceptConnection={(friendshipId) => void acceptEventAttendeeConnection(friendshipId)}
           onSignIn={openSignIn}
         />}
         {page === 'community' && <CommunityPage

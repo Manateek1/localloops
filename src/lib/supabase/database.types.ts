@@ -87,27 +87,6 @@ export type MessageRow = {
   created_at: string
 }
 
-export type RidePostRow = {
-  id: string
-  event_id: string
-  user_id: string
-  kind: 'request' | 'offer'
-  pickup_area: string
-  seats_available: number | null
-  created_at: string
-}
-
-export type ExternalRidePostRow = {
-  id: string
-  event_source: 'ticketmaster' | 'nps' | 'ticketfairy'
-  source_event_id: string
-  user_id: string
-  kind: 'request' | 'offer'
-  pickup_area: string
-  seats_available: number | null
-  created_at: string
-}
-
 export type NotificationRow = {
   id: string
   recipient_id: string
@@ -129,8 +108,6 @@ export type Database = {
       localloops_external_event_rsvps: TableShape<ExternalEventRsvpRow>
       localloops_friendships: TableShape<FriendshipRow>
       localloops_messages: TableShape<MessageRow>
-      localloops_ride_posts: TableShape<RidePostRow>
-      localloops_external_ride_posts: TableShape<ExternalRidePostRow>
       localloops_notifications: TableShape<NotificationRow>
     }
     Views: Record<never, never>
