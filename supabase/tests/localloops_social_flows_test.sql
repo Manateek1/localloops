@@ -1,6 +1,6 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
-SELECT plan(11);
+SELECT plan(12);
 
 INSERT INTO auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 VALUES
@@ -60,8 +60,15 @@ SELECT is(
   'mutual requests resolve to one accepted connection'
 );
 
+SET LOCAL request.jwt.claim.sub = '62222222-2222-4222-8222-222222222222';
 UPDATE public.localloops_profiles SET discoverable = false
 WHERE id = '62222222-2222-4222-8222-222222222222';
+SELECT is(
+  (SELECT discoverable FROM public.localloops_profiles
+   WHERE id = '62222222-2222-4222-8222-222222222222'),
+  false,
+  'a member can hide their profile from public discovery'
+);
 SET LOCAL request.jwt.claim.sub = '61111111-1111-4111-8111-111111111111';
 SELECT is(
   (SELECT count(*)::integer FROM public.localloops_profiles
