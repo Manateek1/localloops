@@ -14,7 +14,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The Vite development server also runs the `/api/geocode` and `/api/events` handlers locally. Address, ZIP, and town search needs no API key. Ticket Fairy is the no-key live event source; Ticketmaster and National Park Service are optional key-backed sources. Sign-in, member profiles, gatherings, shared attendance, ride coordination, connection requests, and messages need a Supabase URL, publishable key, matching project ref, and the checked-in migrations.
+The Vite development server also runs the `/api/geocode` and `/api/events` handlers locally. Address, ZIP, and town search needs no API key. Ticket Fairy is the no-key live event source; Ticketmaster and National Park Service are optional key-backed sources. Sign-in, member profiles, gatherings, shared attendance, connection requests, and messages need a Supabase URL, publishable key, matching project ref, and the checked-in migrations.
 
 ## Configure Supabase
 
@@ -74,7 +74,7 @@ The selected site language is used for browser speech recognition and sent to Gr
 
 ## Translate the site
 
-LocalLoops defaults to English. The header language picker translates public interface and event text with Google Cloud Translation. Private profile fields, member names, pickup-area notes, and direct messages are excluded. The full Google language list appears when the translation API is configured; a common-language list remains available before then.
+LocalLoops defaults to English. The header language picker translates public interface and event text with Google Cloud Translation. Private profile fields, member names, and direct messages are excluded. The full Google language list appears when the translation API is configured; a common-language list remains available before then.
 
 Create a Google Cloud API key, enable Cloud Translation API, and set `GOOGLE_TRANSLATE_API_KEY` as a server-only environment variable in `.env.local` or Vercel. Restrict the key to Cloud Translation API and set an API quota before deploying. A billing-enabled project is required. Google's current pricing applies a monthly $10 credit to the first 500,000 text characters, then charges $20 per million characters for Cloud Translation Basic. See [Google Cloud setup](https://docs.cloud.google.com/translate/docs/setup) and [current pricing](https://cloud.google.com/products/translate/pricing). Without the key, the picker stays available, but the page remains in English with a setup notice.
 
@@ -84,4 +84,4 @@ Import this repository into Vercel with the Vite framework preset. Add the Supab
 
 ## Scope
 
-LocalLoops has email/password sign-in, profiles, opt-in member discovery, connection requests, accepted-connection messages, public community events, shared “I'm going” attendance, and public-place ride coordination. The large sprout character is Leafy, the voice guide. The guide uses Azure AI Foundry with Grok 4.6 for spoken questions and answers, and ElevenLabs for speech synthesis; browser speech recognition and speech synthesis provide browser-side voice support.
+LocalLoops has email/password sign-in, profiles, opt-in member discovery, connection requests, accepted-connection messages, public community events, and shared “I'm going” attendance. The large sprout character is Leafy, the voice guide. The guide uses Azure AI Foundry with Grok 4.6 for spoken questions and answers, and ElevenLabs for speech synthesis; browser speech recognition and speech synthesis provide browser-side voice support.

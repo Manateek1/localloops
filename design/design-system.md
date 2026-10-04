@@ -19,7 +19,7 @@ LocalLoops uses a warm paper surface, deep forest green for primary actions, sof
 ## Primary surfaces
 
 - Explore: Map/List toggle, location search for U.S. towns and ZIP codes, event filters, an OpenStreetMap-based map, and nearby listings from configured public sources.
-- Event detail: event image when supplied by the source, date and public place, RSVP, and broad-area ride coordination.
+- Event detail: event image when supplied by the source, date and public place, and RSVP.
 - Community and Inbox: member profiles, connection requests, and messaging backed by Supabase; profiles stay private until a member opts into discovery.
 - LocalLoops guide: the friendly sprout character anchors the visual identity. AI responses and voice are not enabled yet.
 
