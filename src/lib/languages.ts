@@ -1,5 +1,3 @@
-import type { Language as ElevenLabsLanguage } from '@elevenlabs/react'
-
 export type TranslationLanguage = { code: string; name: string }
 
 // A usable starter list is available before a Google Cloud Translation key is configured.
@@ -38,27 +36,4 @@ export function nativeLanguageName(language: TranslationLanguage) {
   } catch {
     return language.name
   }
-}
-
-const elevenLabsLanguages: ElevenLabsLanguage[] = [
-  'en', 'ja', 'zh', 'de', 'hi', 'fr', 'ko', 'pt', 'pt-br', 'it', 'es', 'id', 'nl', 'tr', 'pl',
-  'sv', 'bg', 'ro', 'ar', 'cs', 'el', 'fi', 'ms', 'da', 'ta', 'uk', 'ru', 'hu', 'hr', 'sk', 'no',
-  'vi', 'tl', 'af', 'hy', 'as', 'az', 'be', 'bn', 'bs', 'ca', 'et', 'gl', 'ka', 'gu', 'ha', 'he',
-  'is', 'ga', 'jv', 'kn', 'kk', 'ky', 'lv', 'lt', 'lb', 'mk', 'ml', 'mr', 'ne', 'ps', 'fa', 'pa',
-  'sr', 'sd', 'sl', 'so', 'sw', 'te', 'ur', 'cy',
-]
-const elevenLabsLanguageSet = new Set<string>(elevenLabsLanguages)
-
-// ElevenLabs uses a smaller language set than Google Translation. Regional Google
-// codes map to their base language when ElevenLabs supports that language.
-export function agentLanguageCode(code: string): ElevenLabsLanguage | undefined {
-  const normalized = code.toLowerCase()
-  const aliases: Record<string, string> = {
-    'pt-br': 'pt-br',
-    'fil': 'tl',
-    'iw': 'he',
-    'in': 'id',
-  }
-  const candidate = aliases[normalized] ?? normalized.split('-')[0] ?? 'en'
-  return elevenLabsLanguageSet.has(candidate) ? candidate as ElevenLabsLanguage : undefined
 }
