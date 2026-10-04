@@ -82,13 +82,15 @@ export async function handleGuideRequest(
       ...(audioBase64 ? { audioBase64 } : {}),
     })
   } catch (error) {
-    const status = error instanceof ProviderError ? error.status : 502
-    const message = status === 429
-      ? 'The AI service is busy right now. Please wait a bit and try again.'
-      : status === 503
-        ? 'The voice guide is temporarily unavailable. Please try again in a moment.'
-        : 'I couldn’t understand that just now. Please try once more.'
-    return json(status === 429 || status === 503 ? status : 502, { error: message })
+    const upstreamStatus = error instanceof ProviderError ? error.status : undefined
+    const timedOut = error instanceof Error && error.name === 'TimeoutError'
+    console.warn('LocalLoops voice reply failed', {
+      upstreamStatus,
+      errorName: error instanceof Error ? error.name : 'unknown',
+    })
+
+    const status = timedOut ? 504 : upstreamStatus === 429 ? 429 : upstreamStatus && upstreamStatus >= 500 ? 503 : 502
+    return json(status, { error: 'The guide could not answer just now. Please try again.' })
   }
 }
 
@@ -138,16 +140,17 @@ async function generateGrokReply({
       model: deployment,
       messages,
       reasoning_effort: 'high',
-      max_completion_tokens: 512,
+      max_completion_tokens: 2048,
     }),
-    signal: AbortSignal.timeout(45_000),
+    // Keep the model call and ElevenLabs call inside Vercel's 55-second route limit.
+    signal: AbortSignal.timeout(30_000),
   })
 
   if (!response.ok) throw new ProviderError(response.status)
   const result = await response.json() as ChatCompletionResponse
   const text = result.choices?.[0]?.message?.content
   const reply = cleanSpokenText(typeof text === 'string' ? text : '').slice(0, MAX_REPLY_LENGTH)
-  if (!reply) throw new Error('Grok returned an empty voice response')
+  if (!reply) throw new ProviderError(502)
   return { reply }
 }
 
@@ -173,7 +176,7 @@ async function generateElevenLabsAudio(text: string, apiKey: string, fetcher: ty
         model_id: 'eleven_flash_v2_5',
         voice_settings: { stability: 0.55, similarity_boost: 0.72, speed: 1.0 },
       }),
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(12_000),
     },
   )
 

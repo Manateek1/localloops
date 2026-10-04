@@ -30,6 +30,7 @@ type SpeechRecognitionWindow = {
 }
 
 const MAX_LISTENING_MS = 15_000
+const MAX_GUIDE_RESPONSE_MS = 48_000
 const MAX_HISTORY_TURNS = 6
 
 export function useCommunityGuideVoice({ events, location, language }: {
@@ -44,6 +45,7 @@ export function useCommunityGuideVoice({ events, location, language }: {
   const activationRef = useRef(0)
   const recognitionRef = useRef<GuideRecognition | null>(null)
   const listeningTimerRef = useRef<number | undefined>(undefined)
+  const guideRequestRef = useRef<AbortController | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -143,6 +145,9 @@ export function useCommunityGuideVoice({ events, location, language }: {
   }, [])
 
   const submitToGuide = useCallback(async ({ transcript }: VoiceInput) => {
+    const controller = new AbortController()
+    guideRequestRef.current = controller
+    const timeoutId = window.setTimeout(() => controller.abort('timeout'), MAX_GUIDE_RESPONSE_MS)
     setVoiceState('thinking')
     setStatusText('Thinking of a good local plan…')
 
@@ -168,7 +173,7 @@ export function useCommunityGuideVoice({ events, location, language }: {
           history: conversationRef.current.slice(-MAX_HISTORY_TURNS),
           context: { location: location?.label ?? '', language, events: eventContext },
         }),
-        signal: AbortSignal.timeout(50_000),
+        signal: controller.signal,
       })
       const result = await response.json() as {
         heard?: string
@@ -185,8 +190,16 @@ export function useCommunityGuideVoice({ events, location, language }: {
 
       await speakReply(result.reply, result.audioBase64, 'Sprout is answering. Tap the button to interrupt.')
     } catch (error) {
+      if (controller.signal.reason === 'cancelled') return
       setVoiceState('error')
-      setStatusText(error instanceof Error ? error.message : 'The guide could not answer just now. Please try again.')
+      setStatusText(controller.signal.reason === 'timeout'
+        ? 'The guide could not answer just now. Please try again.'
+        : error instanceof Error && error.name !== 'TypeError' && error.name !== 'SyntaxError'
+          ? error.message
+          : 'The guide could not answer just now. Please try again.')
+    } finally {
+      window.clearTimeout(timeoutId)
+      if (guideRequestRef.current === controller) guideRequestRef.current = null
     }
   }, [events, language, location, setVoiceState, speakReply])
 
@@ -274,7 +287,13 @@ export function useCommunityGuideVoice({ events, location, language }: {
   }, [setVoiceState, stopListeningTimer])
 
   const onMainButton = useCallback(() => {
-    if (voiceStateRef.current === 'thinking') return
+    if (voiceStateRef.current === 'thinking') {
+      guideRequestRef.current?.abort('cancelled')
+      guideRequestRef.current = null
+      setVoiceState('ready')
+      setStatusText('Ready when you are.')
+      return
+    }
     if (voiceStateRef.current === 'listening') {
       if (recognitionRef.current) recognitionRef.current.stop()
       else interrupt()
@@ -287,7 +306,7 @@ export function useCommunityGuideVoice({ events, location, language }: {
     if (voiceStateRef.current === 'error') setStatusText('Ready when you are.')
     primeAudioPlayback()
     void startListening()
-  }, [interrupt, primeAudioPlayback, startListening])
+  }, [interrupt, primeAudioPlayback, setStatusText, setVoiceState, startListening])
 
   useEffect(() => {
     let active = true
@@ -302,6 +321,8 @@ export function useCommunityGuideVoice({ events, location, language }: {
       active = false
       voiceStateRef.current = 'ready'
       activationRef.current += 1
+      guideRequestRef.current?.abort('cancelled')
+      guideRequestRef.current = null
       if (recognitionRef.current) {
         recognitionRef.current.onend = null
         recognitionRef.current.abort()

@@ -174,6 +174,15 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-guide-controls .greet-button { min-height: 40px; }
 .greet-guide-controls .greet-button--quiet { border: 1px solid #d9e2d6; color: #395542; background: rgba(255,254,250,.82); }
 .greet-guide-controls .greet-button--quiet:hover { background: #fffefa; }
+.greet-guide-spinner { animation: greet-guide-spin .9s linear infinite; }
+.greet-guide-thinking-bar { width: min(100%, 420px); height: 5px; margin: 9px 0 2px; overflow: hidden; border-radius: 999px; background: rgba(17, 79, 59, .14); }
+.greet-guide-thinking-bar > span { display: block; width: 34%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #efa765, #0d5841); animation: greet-guide-progress 1.25s ease-in-out infinite; }
+@keyframes greet-guide-spin { to { transform: rotate(360deg); } }
+@keyframes greet-guide-progress { from { transform: translateX(-120%); } to { transform: translateX(330%); } }
+@media (prefers-reduced-motion: reduce) {
+  .greet-guide-spinner, .greet-guide-thinking-bar > span { animation: none; }
+  .greet-guide-thinking-bar > span { width: 72%; opacity: .8; }
+}
 .greet-guide-status { min-height: 17px; margin-top: 9px !important; color: #53685a !important; font-size: 10px !important; }
 .greet-guide-status:empty { display: none; }
 .greet-guide-card img { width: min(39%, 300px); max-height: 275px; position: absolute; right: 9%; bottom: -13px; object-fit: contain; filter: drop-shadow(0 12px 15px rgba(60,70,48,.15)); }

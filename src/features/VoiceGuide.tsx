@@ -20,7 +20,7 @@ export function VoiceGuide({ events, location }: VoiceGuideProps) {
     : isSpeaking
       ? 'Interrupt Sprout'
       : isThinking
-        ? 'Thinking…'
+        ? 'Interrupt Sprout'
         : voiceState === 'error'
           ? 'Try again'
           : 'Talk to Sprout'
@@ -38,7 +38,6 @@ export function VoiceGuide({ events, location }: VoiceGuideProps) {
             onClick={onMainButton}
             aria-label={label}
             aria-pressed={isListening}
-            disabled={isThinking}
           >
             <Icon size={17} className={isThinking ? 'greet-guide-spinner' : undefined} />
             <span>{label}</span>
@@ -46,6 +45,7 @@ export function VoiceGuide({ events, location }: VoiceGuideProps) {
           {isListening && <span className="greet-guide-live-indicator" aria-label="Microphone is active" />}
           {isSpeaking && <AudioLines size={18} className="greet-guide-speaking-indicator" aria-hidden="true" />}
         </div>
+        {isThinking && <div className="greet-guide-thinking-bar" aria-hidden="true"><span /></div>}
         <p className="greet-guide-status" role="status" aria-live="polite">{statusText}</p>
         <p className="greet-guide-language-note"><Sparkles size={13} aria-hidden="true" />{connectionNote}</p>
         <p className="greet-guide-privacy">Your browser’s speech service may process microphone audio. Azure receives your transcript and selected area/event context; LocalLoops doesn’t save transcripts.</p>
