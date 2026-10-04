@@ -35,8 +35,8 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
           },
         })
         if (signupError) throw signupError
-        if (!data.session) throw new Error('Your account was created, but this project did not sign you in. Email confirmation must be turned off.')
-        onClose()
+        if (data.session) onClose()
+        else setError('This Supabase project requires email confirmation. Turn off email confirmations in its Auth settings to let new accounts sign in right away.')
       } else {
         const { error: signinError } = await client.auth.signInWithPassword({ email: email.trim(), password })
         if (signinError) throw signinError
