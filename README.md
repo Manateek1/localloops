@@ -1,4 +1,4 @@
-# LocalLoops
+# LocalLoops (localloops1.vercel.app)
 
 **LocalLoops** connects neighbors and surfaces real gatherings across local and rural communities. While city dwellers have countless event apps, rural residents often live 20 to 70 miles apart and rely on fragmented cork boards or word of mouth. LocalLoops bridges that distance—uniting neighbors around shared passions, community carpooling, and hands-free conversational voice AI—while fiercely protecting rural privacy.
 
