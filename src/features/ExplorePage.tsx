@@ -55,7 +55,11 @@ export function ExplorePage({
     }
   }
 
-  const unavailableSources = [sources.ticketmaster === 'not_configured' ? 'Ticketmaster' : '', sources.nps === 'not_configured' ? 'National Park Service' : ''].filter(Boolean)
+  const unavailableSources = [
+    sources.ticketmaster === 'not_configured' ? 'Ticketmaster' : '',
+    sources.nps === 'not_configured' ? 'National Park Service' : '',
+    sources.community === 'not_configured' ? 'the LocalLoops database' : '',
+  ].filter(Boolean)
 
   return (
     <div className="greet-page greet-explore-page">
@@ -100,10 +104,12 @@ export function ExplorePage({
             <div className="greet-map-column">
               <Suspense fallback={<div className="greet-map greet-map--loading" role="status">Loading the live map…</div>}><MapCanvas location={location} events={filteredEvents} onOpenEvent={(id) => { const event = filteredEvents.find((item) => item.id === id); if (event) onOpenEvent(event) }} /></Suspense>
               <div className="greet-source-strip">
-                <span className="greet-source-strip__label">Live sources</span>
+                <span className="greet-source-strip__label">Event sources</span>
                 {sources.ticketmaster === 'ready' && <span><CalendarDays size={14} />Ticketmaster</span>}
                 {sources.nps === 'ready' && <span><Trees size={14} />National Park Service</span>}
-                <span><UsersIcon />LocalLoops gatherings</span>
+                {sources.community === 'ready' && <span><UsersIcon />LocalLoops gatherings</span>}
+                {sources.community === 'not_configured' && <span className="greet-source-strip__unavailable">LocalLoops database not connected</span>}
+                {sources.community === 'unavailable' && <span className="greet-source-strip__unavailable">LocalLoops database unavailable</span>}
               </div>
             </div>
             <div className="greet-event-list-column">

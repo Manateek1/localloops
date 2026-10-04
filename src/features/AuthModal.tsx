@@ -32,7 +32,7 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
           email: email.trim(),
           password,
           options: {
-            data: { display_name: name.trim() },
+            data: { localloops_app: true, localloops_display_name: name.trim() },
             emailRedirectTo: window.location.origin,
           },
         })

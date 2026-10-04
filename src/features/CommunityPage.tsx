@@ -90,10 +90,10 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
     setCommunityLoading(true)
     setCommunityError('')
     const membershipRequest = userId
-      ? client.from('community_members').select('*').eq('user_id', userId)
+      ? client.from('localloops_community_members').select('*').eq('user_id', userId)
       : Promise.resolve({ data: [] as CommunityMemberRow[], error: null })
     void Promise.all([
-      client.from('communities').select('id, name, description, region_label, member_count, created_at').order('created_at', { ascending: false }).limit(200),
+      client.from('localloops_communities').select('id, name, description, region_label, member_count, created_at').order('created_at', { ascending: false }).limit(200),
       membershipRequest,
     ]).then(([communityResult, membershipResult]) => {
       if (!active) return
@@ -118,7 +118,7 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
     setCommunityEventsError('')
     void (async () => {
       try {
-        const { data, error } = await client.from('events').select('*').eq('community_id', selectedCommunityId)
+        const { data, error } = await client.from('localloops_events').select('*').eq('community_id', selectedCommunityId)
           .gte('starts_at', new Date().toISOString())
           .order('starts_at', { ascending: true }).limit(50)
         if (!active) return
@@ -131,7 +131,7 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
         setCommunityEvents(rows)
         const hostIds = [...new Set(rows.map((event) => event.host_id))]
         if (!hostIds.length) return
-        const { data: hostProfiles } = await client.from('profiles').select('id, display_name').in('id', hostIds)
+        const { data: hostProfiles } = await client.from('localloops_profiles').select('id, display_name').in('id', hostIds)
         if (active) {
           setCommunityEventHosts(Object.fromEntries(((hostProfiles ?? []) as Pick<ProfileRow, 'id' | 'display_name'>[]).map((host) => [host.id, host.display_name])))
         }
@@ -175,7 +175,7 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
     }
     setFormBusy(true)
     setFormError('')
-    const { data, error } = await client.rpc('create_community', {
+    const { data, error } = await client.rpc('localloops_create_community', {
       p_name: name.trim(),
       p_description: description.trim(),
       p_region_label: region.trim() || null,
@@ -200,7 +200,7 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
     }
     setBusyCommunityId(community.id)
     setCommunityActionError('')
-    const { error } = await client.rpc('join_community', { p_community_id: community.id })
+    const { error } = await client.rpc('localloops_join_community', { p_community_id: community.id })
     setBusyCommunityId(null)
     if (error) {
       setCommunityActionError(error.message)
@@ -214,7 +214,7 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
     if (!userId || !client) return
     setBusyCommunityId(community.id)
     setCommunityActionError('')
-    const { error } = await client.rpc('leave_community', { p_community_id: community.id })
+    const { error } = await client.rpc('localloops_leave_community', { p_community_id: community.id })
     setBusyCommunityId(null)
     if (error) {
       setCommunityActionError(error.message)

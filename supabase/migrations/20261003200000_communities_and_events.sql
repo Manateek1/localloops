@@ -1,5 +1,5 @@
--- Public interest groups are separate from one-to-one friendships and messages.
-create table public.communities (
+-- Public interest groups are separate from one-to-one localloops_friendships and localloops_messages.
+create table public.localloops_communities (
   id uuid primary key default gen_random_uuid(),
   name text not null check (char_length(name) between 2 and 80),
   description text not null default '' check (char_length(description) <= 500),
@@ -9,49 +9,49 @@ create table public.communities (
   created_at timestamptz not null default now()
 );
 
-comment on table public.communities is
-  'Discoverable LocalLoops interest groups; distinct from direct friend messages.';
-comment on column public.communities.region_label is
+comment on table public.localloops_communities is
+  'Discoverable LocalLoops interest groups; distinct from direct friend localloops_messages.';
+comment on column public.localloops_communities.region_label is
   'Broad town or region label only. Never store a home address or precise member location.';
 
-create table public.community_members (
-  community_id uuid not null references public.communities (id) on delete cascade,
+create table public.localloops_community_members (
+  community_id uuid not null references public.localloops_communities (id) on delete cascade,
   user_id uuid not null references auth.users (id) on delete cascade,
   role text not null default 'member' check (role in ('owner', 'member')),
   joined_at timestamptz not null default now(),
   primary key (community_id, user_id)
 );
 
-create index community_members_user_id_idx on public.community_members (user_id, joined_at desc);
-create index communities_created_at_idx on public.communities (created_at desc);
+create index localloops_community_members_user_id_idx on public.localloops_community_members (user_id, joined_at desc);
+create index localloops_communities_created_at_idx on public.localloops_communities (created_at desc);
 
-alter table public.events
-  add column community_id uuid references public.communities (id) on delete set null;
-create index events_community_starts_at_idx on public.events (community_id, starts_at);
+alter table public.localloops_events
+  add column community_id uuid references public.localloops_communities (id) on delete set null;
+create index localloops_events_community_starts_at_idx on public.localloops_events (community_id, starts_at);
 
-alter table public.communities enable row level security;
-alter table public.community_members enable row level security;
+alter table public.localloops_communities enable row level security;
+alter table public.localloops_community_members enable row level security;
 
-revoke all on table public.communities, public.community_members
+revoke all on table public.localloops_communities, public.localloops_community_members
   from public, anon, authenticated, service_role;
 
 -- Community discovery exposes only group details and a member count, not creator IDs.
 grant select (id, name, description, region_label, member_count, created_at)
-  on public.communities to anon, authenticated;
-grant select on public.community_members to authenticated;
-grant insert (community_id) on public.events to authenticated;
-grant update (community_id) on public.events to authenticated;
+  on public.localloops_communities to anon, authenticated;
+grant select on public.localloops_community_members to authenticated;
+grant insert (community_id) on public.localloops_events to authenticated;
+grant update (community_id) on public.localloops_events to authenticated;
 
-create policy "Anyone can discover public communities"
-  on public.communities for select to anon, authenticated
+create policy "Anyone can discover public localloops_communities"
+  on public.localloops_communities for select to anon, authenticated
   using (true);
 
 create policy "Members can read their own community memberships"
-  on public.community_members for select to authenticated
+  on public.localloops_community_members for select to authenticated
   using ((select auth.uid()) = user_id);
 
 -- Keep the public count accurate for creates, joins, leaves, and account deletion.
-create function public.maintain_community_member_count()
+create function public.localloops_maintain_community_member_count()
 returns trigger
 language plpgsql
 security definer
@@ -59,7 +59,7 @@ set search_path = ''
 as $$
 begin
   if tg_op = 'INSERT' then
-    update public.communities
+    update public.localloops_communities
       set member_count = member_count + 1
       where id = new.community_id and member_count < 50;
     if not found then
@@ -68,25 +68,25 @@ begin
     return new;
   end if;
 
-  update public.communities
+  update public.localloops_communities
     set member_count = greatest(member_count - 1, 0)
     where id = old.community_id;
   return old;
 end;
 $$;
 
-revoke all on function public.maintain_community_member_count() from public, anon, authenticated, service_role;
+revoke all on function public.localloops_maintain_community_member_count() from public, anon, authenticated, service_role;
 
-create trigger maintain_community_member_count_after_insert
-  after insert on public.community_members
-  for each row execute function public.maintain_community_member_count();
-create trigger maintain_community_member_count_after_delete
-  after delete on public.community_members
-  for each row execute function public.maintain_community_member_count();
+create trigger localloops_maintain_community_member_count_after_insert
+  after insert on public.localloops_community_members
+  for each row execute function public.localloops_maintain_community_member_count();
+create trigger localloops_maintain_community_member_count_after_delete
+  after delete on public.localloops_community_members
+  for each row execute function public.localloops_maintain_community_member_count();
 
 -- Creation and membership changes are atomic; a row lock prevents concurrent joins
 -- from taking a community past its 50 person limit.
-create function public.create_community(
+create function public.localloops_create_community(
   p_name text,
   p_description text,
   p_region_label text
@@ -116,16 +116,16 @@ begin
     raise exception 'The broad area must be 100 characters or less.' using errcode = '22023';
   end if;
 
-  insert into public.communities (name, description, region_label, created_by)
+  insert into public.localloops_communities (name, description, region_label, created_by)
     values (v_name, v_description, v_region, v_user_id)
     returning id into v_community_id;
-  insert into public.community_members (community_id, user_id, role)
+  insert into public.localloops_community_members (community_id, user_id, role)
     values (v_community_id, v_user_id, 'owner');
   return v_community_id;
 end;
 $$;
 
-create function public.join_community(p_community_id uuid)
+create function public.localloops_join_community(p_community_id uuid)
 returns integer
 language plpgsql
 security definer
@@ -140,13 +140,13 @@ begin
   end if;
 
   select member_count into v_member_count
-    from public.communities where id = p_community_id for update;
+    from public.localloops_communities where id = p_community_id for update;
   if not found then
     raise exception 'This community no longer exists.' using errcode = 'P0002';
   end if;
 
   if exists (
-    select 1 from public.community_members
+    select 1 from public.localloops_community_members
       where community_id = p_community_id and user_id = v_user_id
   ) then
     return v_member_count;
@@ -155,14 +155,14 @@ begin
     raise exception 'This community has reached its 50 member limit.' using errcode = '23514';
   end if;
 
-  insert into public.community_members (community_id, user_id, role)
+  insert into public.localloops_community_members (community_id, user_id, role)
     values (p_community_id, v_user_id, 'member');
-  select member_count into v_member_count from public.communities where id = p_community_id;
+  select member_count into v_member_count from public.localloops_communities where id = p_community_id;
   return v_member_count;
 end;
 $$;
 
-create function public.leave_community(p_community_id uuid)
+create function public.localloops_leave_community(p_community_id uuid)
 returns integer
 language plpgsql
 security definer
@@ -178,7 +178,7 @@ begin
   end if;
 
   select created_by, member_count into v_owner_id, v_member_count
-    from public.communities where id = p_community_id for update;
+    from public.localloops_communities where id = p_community_id for update;
   if not found then
     raise exception 'This community no longer exists.' using errcode = 'P0002';
   end if;
@@ -186,44 +186,44 @@ begin
     raise exception 'Community organizers cannot leave their own community.' using errcode = '42501';
   end if;
 
-  delete from public.community_members
+  delete from public.localloops_community_members
     where community_id = p_community_id and user_id = v_user_id;
-  select member_count into v_member_count from public.communities where id = p_community_id;
+  select member_count into v_member_count from public.localloops_communities where id = p_community_id;
   return v_member_count;
 end;
 $$;
 
-revoke all on function public.create_community(text, text, text) from public, anon, service_role;
-revoke all on function public.join_community(uuid) from public, anon, service_role;
-revoke all on function public.leave_community(uuid) from public, anon, service_role;
-grant execute on function public.create_community(text, text, text) to authenticated;
-grant execute on function public.join_community(uuid) to authenticated;
-grant execute on function public.leave_community(uuid) to authenticated;
+revoke all on function public.localloops_create_community(text, text, text) from public, anon, service_role;
+revoke all on function public.localloops_join_community(uuid) from public, anon, service_role;
+revoke all on function public.localloops_leave_community(uuid) from public, anon, service_role;
+grant execute on function public.localloops_create_community(text, text, text) to authenticated;
+grant execute on function public.localloops_join_community(uuid) to authenticated;
+grant execute on function public.localloops_leave_community(uuid) to authenticated;
 
 -- Events attached to a community may only be hosted by a member, after the group
--- has its second member. Existing non-community public events keep their behavior.
-drop policy if exists "Members host public events as themselves" on public.events;
-create policy "Members host public events as themselves"
-  on public.events for insert to authenticated
+-- has its second member. Existing non-community public localloops_events keep their behavior.
+drop policy if exists "Members host public localloops_events as themselves" on public.localloops_events;
+create policy "Members host public localloops_events as themselves"
+  on public.localloops_events for insert to authenticated
   with check (
     (select auth.uid()) = host_id
     and visibility = 'public'
     and (
       community_id is null
       or exists (
-        select 1 from public.communities c
-        where c.id = events.community_id and c.member_count >= 2
+        select 1 from public.localloops_communities c
+        where c.id = localloops_events.community_id and c.member_count >= 2
           and exists (
-            select 1 from public.community_members m
+            select 1 from public.localloops_community_members m
             where m.community_id = c.id and m.user_id = (select auth.uid())
           )
       )
     )
   );
 
-drop policy if exists "Hosts update their own public events" on public.events;
-create policy "Hosts update their own public events"
-  on public.events for update to authenticated
+drop policy if exists "Hosts update their own public localloops_events" on public.localloops_events;
+create policy "Hosts update their own public localloops_events"
+  on public.localloops_events for update to authenticated
   using ((select auth.uid()) = host_id)
   with check (
     (select auth.uid()) = host_id
@@ -231,10 +231,10 @@ create policy "Hosts update their own public events"
     and (
       community_id is null
       or exists (
-        select 1 from public.communities c
-        where c.id = events.community_id and c.member_count >= 2
+        select 1 from public.localloops_communities c
+        where c.id = localloops_events.community_id and c.member_count >= 2
           and exists (
-            select 1 from public.community_members m
+            select 1 from public.localloops_community_members m
             where m.community_id = c.id and m.user_id = (select auth.uid())
           )
       )

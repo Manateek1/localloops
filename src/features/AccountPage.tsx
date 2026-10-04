@@ -37,7 +37,7 @@ export function AccountPage({ client, userId, profile, onSave }: AccountPageProp
     setBusy(true)
     setMessage('')
     setError('')
-    const result = await client.from('profiles').upsert({
+    const result = await client.from('localloops_profiles').upsert({
       id: userId,
       display_name: name.trim(),
       home_region: region.trim() || null,

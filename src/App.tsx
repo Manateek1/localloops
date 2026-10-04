@@ -16,7 +16,11 @@ import type { FriendshipRow, MessageRow, ProfileRow } from './lib/supabase/datab
 import { supabaseClient } from './lib/supabase/client'
 import { TranslationNotice } from './features/LanguageProvider'
 
-const noSources: EventFeedState = { ticketmaster: 'not_configured', nps: 'not_configured' }
+const noSources: EventFeedState = {
+  ticketmaster: 'not_configured',
+  nps: 'not_configured',
+  community: 'not_configured',
+}
 
 function App() {
   const [page, setPage] = useState<Page>('explore')
@@ -60,9 +64,16 @@ function App() {
         setUser(data.session?.user ?? null)
         setAuthLoading(false)
       }
+    }).catch(() => {
+      if (active) {
+        setUser(null)
+        setAuthLoading(false)
+        setToast('Your session could not be checked. You can still try signing in.')
+      }
     })
     const { data } = supabaseClient.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
+      setAuthLoading(false)
       if (!session) {
         setProfile(null)
         setFriendships([])
@@ -83,8 +94,20 @@ function App() {
       return
     }
     let active = true
-    void supabaseClient.from('profiles').select('*').eq('id', user.id).maybeSingle().then(({ data }) => {
+    void (async () => {
+      const displayName = user.user_metadata?.localloops_display_name
+      const { error: ensureError } = await supabaseClient.rpc('localloops_ensure_profile', {
+        p_display_name: typeof displayName === 'string' ? displayName : null,
+      })
+      if (ensureError) throw ensureError
+      const { data, error } = await supabaseClient.from('localloops_profiles').select('*').eq('id', user.id).maybeSingle()
+      if (error) throw error
       if (active) setProfile((data as Profile | null) ?? null)
+    })().catch(() => {
+      if (active) {
+        setProfile(null)
+        setToast('Your LocalLoops profile could not load. Please try refreshing the page.')
+      }
     })
     return () => { active = false }
   }, [user?.id, profileRefresh])
@@ -103,9 +126,9 @@ function App() {
       getCommunityEvents(supabaseClient, location, radius),
     ]).then(([feed, community]) => {
       if (!active) return
-      setEvents(sortNearby([...feed.events, ...community]))
-      setFeedSources(feed.sources)
-      setFeedErrors(feed.errors)
+      setEvents(sortNearby([...feed.events, ...community.events]))
+      setFeedSources({ ...feed.sources, community: community.status })
+      setFeedErrors([...feed.errors, ...(community.error ? [community.error] : [])])
     }).catch(() => {
       if (!active) return
       setEvents([])
@@ -123,11 +146,11 @@ function App() {
     setSocialLoading(true)
     const client = supabaseClient
     const load = async () => {
-      let profileQuery = client.from('profiles').select('*').eq('discoverable', true).neq('id', user.id)
+      let profileQuery = client.from('localloops_profiles').select('*').eq('discoverable', true).neq('id', user.id)
       if (location?.stateCode) profileQuery = profileQuery.eq('state_code', location.stateCode)
       const [profileResult, friendshipResult] = await Promise.all([
         profileQuery.order('created_at', { ascending: false }).limit(100),
-        client.from('friendships').select('*').or('requester_id.eq.' + user.id + ',addressee_id.eq.' + user.id).order('created_at', { ascending: false }),
+        client.from('localloops_friendships').select('*').or('requester_id.eq.' + user.id + ',addressee_id.eq.' + user.id).order('created_at', { ascending: false }),
       ])
       if (!active) return
       const realProfiles = (profileResult.data ?? []) as ProfileRow[]
@@ -135,7 +158,7 @@ function App() {
       setFriendships(relationRows)
       const linkedProfileIds = [...new Set(relationRows.flatMap((row) => [row.requester_id, row.addressee_id]).filter((id) => id !== user.id))]
       const { data: linkedProfiles } = linkedProfileIds.length
-        ? await client.from('profiles').select('*').in('id', linkedProfileIds)
+        ? await client.from('localloops_profiles').select('*').in('id', linkedProfileIds)
         : { data: [] }
       const profilesById = new Map<string, ProfileRow>()
       ;[...realProfiles, ...((linkedProfiles ?? []) as ProfileRow[])].forEach((item) => profilesById.set(item.id, item))
@@ -145,7 +168,7 @@ function App() {
         setMessages([])
         return
       }
-      const { data: messageRows } = await client.from('messages').select('*').in('friendship_id', threadIds).order('created_at', { ascending: true }).limit(500)
+      const { data: messageRows } = await client.from('localloops_messages').select('*').in('friendship_id', threadIds).order('created_at', { ascending: true }).limit(500)
       if (active) setMessages((messageRows ?? []) as MessageRow[])
     }
     void load().catch(() => {
@@ -213,7 +236,7 @@ function App() {
       (item.requester_id === user.id && item.addressee_id === profileId)
       || (item.requester_id === profileId && item.addressee_id === user.id))
     if (existing) return
-    const { error } = await supabaseClient.from('friendships').insert({ requester_id: user.id, addressee_id: profileId })
+    const { error } = await supabaseClient.from('localloops_friendships').insert({ requester_id: user.id, addressee_id: profileId })
     if (error) notify(error.message)
     else {
       notify('Your hello is on its way.')
@@ -223,7 +246,7 @@ function App() {
 
   const acceptConnectionRequest = async (friendshipId: string) => {
     if (!supabaseClient || !user) return
-    const { error } = await supabaseClient.from('friendships').update({ status: 'accepted', accepted_at: new Date().toISOString() }).eq('id', friendshipId).eq('addressee_id', user.id)
+    const { error } = await supabaseClient.from('localloops_friendships').update({ status: 'accepted', accepted_at: new Date().toISOString() }).eq('id', friendshipId).eq('addressee_id', user.id)
     if (error) notify(error.message)
     else {
       notify('You’re connected. A conversation is ready when you are.')
@@ -233,7 +256,7 @@ function App() {
 
   const dismissConnectionRequest = async (friendshipId: string) => {
     if (!supabaseClient || !user) return
-    const { error } = await supabaseClient.from('friendships').delete().eq('id', friendshipId)
+    const { error } = await supabaseClient.from('localloops_friendships').delete().eq('id', friendshipId)
     if (error) notify(error.message)
     else refreshSocial()
   }
@@ -246,7 +269,7 @@ function App() {
   const sendMessage = async (text: string): Promise<boolean> => {
     if (!supabaseClient || !user || !selectedThreadId) return false
     setMessageSending(true)
-    const { error } = await supabaseClient.from('messages').insert({ friendship_id: selectedThreadId, sender_id: user.id, body: text })
+    const { error } = await supabaseClient.from('localloops_messages').insert({ friendship_id: selectedThreadId, sender_id: user.id, body: text })
     setMessageSending(false)
     if (error) {
       notify(error.message)
@@ -267,18 +290,18 @@ function App() {
     const isCommunity = event.source === 'community' && Boolean(event.communityEventId)
     const [rsvpResult, rideResult, friendshipResult] = await Promise.all([
       isCommunity
-        ? supabaseClient.from('event_rsvps').select('event_id,user_id,status,created_at').eq('event_id', event.communityEventId!).eq('user_id', user.id).maybeSingle()
-        : supabaseClient.from('external_event_rsvps').select('event_source,source_event_id,user_id,status,created_at').eq('event_source', event.source as Exclude<EventSource, 'community'>).eq('source_event_id', event.sourceId).eq('user_id', user.id).maybeSingle(),
+        ? supabaseClient.from('localloops_event_rsvps').select('event_id,user_id,status,created_at').eq('event_id', event.communityEventId!).eq('user_id', user.id).maybeSingle()
+        : supabaseClient.from('localloops_external_event_rsvps').select('event_source,source_event_id,user_id,status,created_at').eq('event_source', event.source as Exclude<EventSource, 'community'>).eq('source_event_id', event.sourceId).eq('user_id', user.id).maybeSingle(),
       isCommunity
-        ? supabaseClient.from('ride_posts').select('id,event_id,user_id,kind,pickup_area,seats_available,created_at').eq('event_id', event.communityEventId!)
-        : supabaseClient.from('external_ride_posts').select('id,event_source,source_event_id,user_id,kind,pickup_area,seats_available,created_at').eq('event_source', event.source as Exclude<EventSource, 'community'>).eq('source_event_id', event.sourceId),
-      supabaseClient.from('friendships').select('*').or('requester_id.eq.' + user.id + ',addressee_id.eq.' + user.id).order('created_at', { ascending: false }),
+        ? supabaseClient.from('localloops_ride_posts').select('id,event_id,user_id,kind,pickup_area,seats_available,created_at').eq('event_id', event.communityEventId!)
+        : supabaseClient.from('localloops_external_ride_posts').select('id,event_source,source_event_id,user_id,kind,pickup_area,seats_available,created_at').eq('event_source', event.source as Exclude<EventSource, 'community'>).eq('source_event_id', event.sourceId),
+      supabaseClient.from('localloops_friendships').select('*').or('requester_id.eq.' + user.id + ',addressee_id.eq.' + user.id).order('created_at', { ascending: false }),
     ])
     setGoing(rsvpResult.data?.status === 'going')
     const rideRows = rideResult.data ?? []
     const memberIds = [...new Set(rideRows.map((row: any) => row.user_id))]
     const { data: memberProfiles } = memberIds.length
-      ? await supabaseClient.from('profiles').select('id,display_name').in('id', memberIds)
+      ? await supabaseClient.from('localloops_profiles').select('id,display_name').in('id', memberIds)
       : { data: [] }
     const namesById = new Map(((memberProfiles ?? []) as Pick<ProfileRow, 'id' | 'display_name'>[]).map((row) => [row.id, row.display_name]))
     const rides = rideRows.map((row: any) => ({
@@ -311,11 +334,11 @@ function App() {
     const nextGoing = !going
     const result = event.source === 'community' && event.communityEventId
       ? nextGoing
-        ? await supabaseClient.from('event_rsvps').upsert({ event_id: event.communityEventId, user_id: user.id, status: 'going' }, { onConflict: 'event_id,user_id' })
-        : await supabaseClient.from('event_rsvps').delete().eq('event_id', event.communityEventId).eq('user_id', user.id)
+        ? await supabaseClient.from('localloops_event_rsvps').upsert({ event_id: event.communityEventId, user_id: user.id, status: 'going' }, { onConflict: 'event_id,user_id' })
+        : await supabaseClient.from('localloops_event_rsvps').delete().eq('event_id', event.communityEventId).eq('user_id', user.id)
       : nextGoing
-        ? await supabaseClient.from('external_event_rsvps').upsert({ event_source: event.source as Exclude<EventSource, 'community'>, source_event_id: event.sourceId, user_id: user.id, status: 'going' }, { onConflict: 'event_source,source_event_id,user_id' })
-        : await supabaseClient.from('external_event_rsvps').delete().eq('event_source', event.source as Exclude<EventSource, 'community'>).eq('source_event_id', event.sourceId).eq('user_id', user.id)
+        ? await supabaseClient.from('localloops_external_event_rsvps').upsert({ event_source: event.source as Exclude<EventSource, 'community'>, source_event_id: event.sourceId, user_id: user.id, status: 'going' }, { onConflict: 'event_source,source_event_id,user_id' })
+        : await supabaseClient.from('localloops_external_event_rsvps').delete().eq('event_source', event.source as Exclude<EventSource, 'community'>).eq('source_event_id', event.sourceId).eq('user_id', user.id)
     setEventBusy(false)
     if (result.error) notify(result.error.message)
     else {
@@ -333,8 +356,8 @@ function App() {
     const event = selectedEvent
     const isCommunity = event.source === 'community' && Boolean(event.communityEventId)
     const result = isCommunity
-      ? await supabaseClient.from('ride_posts').upsert({ event_id: event.communityEventId!, user_id: user.id, kind, pickup_area: pickupArea, seats_available: seats }, { onConflict: 'event_id,user_id' }).select('*').single()
-      : await supabaseClient.from('external_ride_posts').upsert({ event_source: event.source as Exclude<EventSource, 'community'>, source_event_id: event.sourceId, user_id: user.id, kind, pickup_area: pickupArea, seats_available: seats }, { onConflict: 'event_source,source_event_id,user_id' }).select('*').single()
+      ? await supabaseClient.from('localloops_ride_posts').upsert({ event_id: event.communityEventId!, user_id: user.id, kind, pickup_area: pickupArea, seats_available: seats }, { onConflict: 'event_id,user_id' }).select('*').single()
+      : await supabaseClient.from('localloops_external_ride_posts').upsert({ event_source: event.source as Exclude<EventSource, 'community'>, source_event_id: event.sourceId, user_id: user.id, kind, pickup_area: pickupArea, seats_available: seats }, { onConflict: 'event_source,source_event_id,user_id' }).select('*').single()
     setEventBusy(false)
     if (result.error || !result.data) {
       notify(result.error?.message ?? 'We could not save your ride plan.')
@@ -351,7 +374,7 @@ function App() {
       (item.requester_id === user.id && item.addressee_id === memberId)
       || (item.addressee_id === user.id && item.requester_id === memberId))
     if (existing) return
-    const { error } = await supabaseClient.from('friendships').insert({ requester_id: user.id, addressee_id: memberId })
+    const { error } = await supabaseClient.from('localloops_friendships').insert({ requester_id: user.id, addressee_id: memberId })
     if (error) notify(error.message)
     else {
       notify('Your hello is on its way.')

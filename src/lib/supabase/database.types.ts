@@ -121,29 +121,33 @@ export type NotificationRow = {
 export type Database = {
   public: {
     Tables: {
-      profiles: TableShape<ProfileRow>
-      communities: TableShape<CommunityRow>
-      community_members: TableShape<CommunityMemberRow>
-      events: TableShape<EventRow>
-      event_rsvps: TableShape<EventRsvpRow>
-      external_event_rsvps: TableShape<ExternalEventRsvpRow>
-      friendships: TableShape<FriendshipRow>
-      messages: TableShape<MessageRow>
-      ride_posts: TableShape<RidePostRow>
-      external_ride_posts: TableShape<ExternalRidePostRow>
-      notifications: TableShape<NotificationRow>
+      localloops_profiles: TableShape<ProfileRow>
+      localloops_communities: TableShape<CommunityRow>
+      localloops_community_members: TableShape<CommunityMemberRow>
+      localloops_events: TableShape<EventRow>
+      localloops_event_rsvps: TableShape<EventRsvpRow>
+      localloops_external_event_rsvps: TableShape<ExternalEventRsvpRow>
+      localloops_friendships: TableShape<FriendshipRow>
+      localloops_messages: TableShape<MessageRow>
+      localloops_ride_posts: TableShape<RidePostRow>
+      localloops_external_ride_posts: TableShape<ExternalRidePostRow>
+      localloops_notifications: TableShape<NotificationRow>
     }
     Views: Record<never, never>
     Functions: {
-      create_community: {
+      localloops_ensure_profile: {
+        Args: { p_display_name?: string | null }
+        Returns: undefined
+      }
+      localloops_create_community: {
         Args: { p_name: string; p_description: string; p_region_label: string | null }
         Returns: string
       }
-      join_community: {
+      localloops_join_community: {
         Args: { p_community_id: string }
         Returns: number
       }
-      leave_community: {
+      localloops_leave_community: {
         Args: { p_community_id: string }
         Returns: number
       }

@@ -6,11 +6,21 @@ import type { Database } from './supabase/database.types'
 export type EventFeedState = {
   ticketmaster: 'ready' | 'not_configured' | 'unavailable'
   nps: 'ready' | 'not_configured' | 'unavailable'
+  community: 'ready' | 'not_configured' | 'unavailable'
 }
 
 export type EventFeed = { events: CommunityEvent[]; sources: EventFeedState; errors: string[] }
+export type CommunityEventFeed = {
+  events: CommunityEvent[]
+  status: EventFeedState['community']
+  error: string | null
+}
 
-const emptySources: EventFeedState = { ticketmaster: 'not_configured', nps: 'not_configured' }
+export const emptySources: EventFeedState = {
+  ticketmaster: 'not_configured',
+  nps: 'not_configured',
+  community: 'not_configured',
+}
 
 export async function getSourcedEvents(location: LocationResult, radius: number): Promise<EventFeed> {
   try {
@@ -31,7 +41,7 @@ export async function getSourcedEvents(location: LocationResult, radius: number)
   } catch {
     return {
       events: [],
-      sources: { ticketmaster: 'unavailable', nps: 'unavailable' },
+      sources: { ticketmaster: 'unavailable', nps: 'unavailable', community: 'not_configured' },
       errors: ['Event search could not connect. Try again in a moment.'],
     }
   }
@@ -50,15 +60,15 @@ export async function getCommunityEvents(
   client: SupabaseClient<Database> | null,
   location: LocationResult,
   radius: number,
-): Promise<CommunityEvent[]> {
-  if (!client) return []
+): Promise<CommunityEventFeed> {
+  if (!client) return { events: [], status: 'not_configured', error: null }
   const until = new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString()
   const latDelta = radius / 69
   const longitudeDelta = Math.min(180, radius / (69 * Math.max(0.1, Math.cos(location.latitude * Math.PI / 180))))
   const minLongitude = location.longitude - longitudeDelta
   const maxLongitude = location.longitude + longitudeDelta
   let request = client
-    .from('events')
+    .from('localloops_events')
     .select('*')
     .gte('starts_at', new Date().toISOString())
     .lte('starts_at', until)
@@ -70,7 +80,13 @@ export async function getCommunityEvents(
   else if (maxLongitude > 180) request = request.or(`longitude.gte.${minLongitude},longitude.lte.${maxLongitude - 360}`)
   else request = request.gte('longitude', minLongitude).lte('longitude', maxLongitude)
   const { data, error } = await request
-  if (error || !data) return []
+  if (error || !data) {
+    return {
+      events: [],
+      status: 'unavailable',
+      error: 'LocalLoops gatherings could not load from the database. Try again in a moment.',
+    }
+  }
 
   const rows = data as EventRow[]
   const distanceById = new Map<string, number>()
@@ -83,13 +99,13 @@ export async function getCommunityEvents(
   const hostIds = [...new Set(nearby.map((event) => event.host_id))]
   const hostNames = new Map<string, string>()
   if (hostIds.length) {
-    const { data: profiles } = await client.from('profiles').select('id, display_name').in('id', hostIds)
+    const { data: profiles } = await client.from('localloops_profiles').select('id, display_name').in('id', hostIds)
     for (const profile of (profiles ?? []) as Pick<ProfileRow, 'id' | 'display_name'>[]) {
       hostNames.set(profile.id, profile.display_name)
     }
   }
 
-  return nearby.map((event) => ({
+  return { events: nearby.map((event) => ({
     id: `community:${event.id}`,
     sourceId: event.id,
     source: 'community' as EventSource,
@@ -111,7 +127,7 @@ export async function getCommunityEvents(
     distanceMiles: distanceById.get(event.id),
     communityEventId: event.id,
     hostName: hostNames.get(event.host_id),
-  }))
+  })), status: 'ready', error: null }
 }
 
 export function sortNearby(events: CommunityEvent[]) {
