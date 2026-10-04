@@ -12,14 +12,15 @@ type MapCanvasProps = {
   location: LocationResult | null
   events: CommunityEvent[]
   showSearchRadius?: boolean
+  searchRadiusMiles?: number
   onOpenEvent: (eventId: string) => void
 }
 
 const SEARCH_RADIUS_SOURCE = 'localloops-search-radius'
 
-function searchRadiusFeature(location: LocationResult): Feature<Polygon> {
+function searchRadiusFeature(location: LocationResult, radiusMiles: number): Feature<Polygon> {
   const earthRadiusKm = 6371.0088
-  const angularRadius = EVENT_SEARCH_RADIUS_MILES * 1.609344 / earthRadiusKm
+  const angularRadius = radiusMiles * 1.609344 / earthRadiusKm
   const latitude = location.latitude * Math.PI / 180
   const longitude = location.longitude * Math.PI / 180
   const steps = 72
@@ -45,7 +46,7 @@ function searchRadiusFeature(location: LocationResult): Feature<Polygon> {
   }
 }
 
-export function MapCanvas({ location, events, showSearchRadius = false, onOpenEvent }: MapCanvasProps) {
+export function MapCanvas({ location, events, showSearchRadius = false, searchRadiusMiles = EVENT_SEARCH_RADIUS_MILES, onOpenEvent }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef<Marker[]>([])
@@ -102,7 +103,7 @@ export function MapCanvas({ location, events, showSearchRadius = false, onOpenEv
 
     const updateMapView = () => {
       if (showSearchRadius) {
-        const coordinates = searchRadiusFeature(location).geometry.coordinates[0]
+        const coordinates = searchRadiusFeature(location, searchRadiusMiles).geometry.coordinates[0]
         const first = coordinates[0] as [number, number]
         const bounds = new LngLatBounds(first, first)
         coordinates.slice(1).forEach((coordinate) => bounds.extend(coordinate as [number, number]))
@@ -119,7 +120,7 @@ export function MapCanvas({ location, events, showSearchRadius = false, onOpenEv
       map.off('resize', updateMapView)
       map.off('load', updateMapView)
     }
-  }, [location, showSearchRadius])
+  }, [location, showSearchRadius, searchRadiusMiles])
 
   useEffect(() => {
     const map = mapRef.current
@@ -129,13 +130,13 @@ export function MapCanvas({ location, events, showSearchRadius = false, onOpenEv
       if (!map.isStyleLoaded()) return
       const source = map.getSource(SEARCH_RADIUS_SOURCE) as GeoJSONSource | undefined
       if (source) {
-        source.setData(searchRadiusFeature(location))
+        source.setData(searchRadiusFeature(location, searchRadiusMiles))
         return
       }
 
       map.addSource(SEARCH_RADIUS_SOURCE, {
         type: 'geojson',
-        data: searchRadiusFeature(location),
+        data: searchRadiusFeature(location, searchRadiusMiles),
       })
       const firstSymbolLayer = map.getStyle().layers?.find((layer) => layer.type === 'symbol')?.id
       map.addLayer({
@@ -155,7 +156,7 @@ export function MapCanvas({ location, events, showSearchRadius = false, onOpenEv
     if (map.isStyleLoaded()) updateSearchRadius()
     else map.once('load', updateSearchRadius)
     return () => { map.off('load', updateSearchRadius) }
-  }, [location, showSearchRadius])
+  }, [location, showSearchRadius, searchRadiusMiles])
 
   useEffect(() => {
     const map = mapRef.current
@@ -176,9 +177,9 @@ export function MapCanvas({ location, events, showSearchRadius = false, onOpenEv
   }, [events])
 
   return (
-    <div className="greet-map" role="region" aria-label={showSearchRadius ? `Map of events within ${EVENT_SEARCH_RADIUS_MILES} miles` : 'Map of real nearby events'}>
+    <div className="greet-map" role="region" aria-label={showSearchRadius ? `Map of events within ${searchRadiusMiles} miles` : 'Map of real nearby events'}>
       <div ref={containerRef} className="greet-map__canvas" />
-      {showSearchRadius && location && <div className="greet-map__radius-label"><span aria-hidden="true" />{EVENT_SEARCH_RADIUS_MILES}-mile search radius</div>}
+      {showSearchRadius && location && <div className="greet-map__radius-label"><span aria-hidden="true" />{searchRadiusMiles}-mile search radius</div>}
       {!location && <div className="greet-map__prompt"><span>Start with any U.S. town or ZIP code.</span></div>}
       {location && events.length === 0 && <div className="greet-map__prompt greet-map__prompt--location"><span>The map is centered near {location.label}.</span></div>}
     </div>

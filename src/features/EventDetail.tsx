@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useState, type FormEvent } from 'react'
 import { ArrowLeft, CalendarDays, CarFront, Check, ExternalLink, MapPin, Trees, Users } from 'lucide-react'
-import type { CommunityEvent, EventSource, LocationResult } from '../data/models'
+import type { CommunityEvent, EventAttendee, EventSource, LocationResult } from '../data/models'
 import type { FriendshipRow } from '../lib/supabase/database.types'
 
 const MapCanvas = lazy(() => import('../components/MapCanvas').then((module) => ({ default: module.MapCanvas })))
@@ -18,6 +18,7 @@ export type RidePlan = {
 type EventDetailProps = {
   event: CommunityEvent
   going: boolean
+  attendees: EventAttendee[]
   ridePost: RidePlan | null
   ridePosts: RidePlan[]
   friendships: FriendshipRow[]
@@ -45,7 +46,7 @@ function eventDate(value: string | null) {
     : date.toLocaleString(undefined, { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-export function EventDetail({ event, going, ridePost, ridePosts, friendships, userId, signedIn, busy, onBack, onRsvp, onRide, onSayHello, onAcceptConnection, onMessage, onSignIn }: EventDetailProps) {
+export function EventDetail({ event, going, attendees, ridePost, ridePosts, friendships, userId, signedIn, busy, onBack, onRsvp, onRide, onSayHello, onAcceptConnection, onMessage, onSignIn }: EventDetailProps) {
   const [rideKind, setRideKind] = useState<'request' | 'offer' | null>(null)
   const [pickupArea, setPickupArea] = useState(ridePost?.pickup_area ?? '')
   const [seats, setSeats] = useState(1)
@@ -60,7 +61,7 @@ export function EventDetail({ event, going, ridePost, ridePosts, friendships, us
     longitude: event.longitude,
     zoom: 12,
   }
-  const distance = event.distanceMiles === undefined ? '' : Math.round(event.distanceMiles) + ' miles from your search area'
+  const distance = event.distanceMiles === undefined ? '' : Math.round(event.distanceMiles) + ' miles from your search location'
 
   useEffect(() => {
     setPickupArea(ridePost?.pickup_area ?? '')
@@ -99,8 +100,8 @@ export function EventDetail({ event, going, ridePost, ridePosts, friendships, us
           </div>
           <div className="greet-event-facts">
             <div><CalendarDays size={18} /><span><strong>{eventDate(event.startsAt)}{event.timeLabel ? ' · ' + event.timeLabel : ''}</strong><small>Time shown as listed by the organizer</small></span></div>
-            <div><MapPin size={18} /><span><strong>{event.venue}</strong><small>{[event.city, event.stateCode].filter(Boolean).join(', ')} · approximate map pin</small></span></div>
-            {distance && <div><Trees size={18} /><span><strong>{distance}</strong><small>Based on your town or ZIP search</small></span></div>}
+            <div><MapPin size={18} /><span><strong>{event.venue}</strong><small>{[event.city, event.stateCode].filter(Boolean).join(', ')} · public event location</small></span></div>
+            {distance && <div><Trees size={18} /><span><strong>{distance}</strong><small>Based on the place you searched</small></span></div>}
           </div>
           <Suspense fallback={<div className="greet-map greet-map--loading" role="status">Loading the event map…</div>}><MapCanvas location={eventLocation} events={[event]} onOpenEvent={() => undefined} /></Suspense>
           <p className="greet-map-privacy">The map marks the public venue or broad meetup area. Member home locations are never shown.</p>
@@ -150,9 +151,35 @@ export function EventDetail({ event, going, ridePost, ridePosts, friendships, us
           </div>
           {event.source === 'community' && event.hostName && <p className="greet-community-event-note"><Users size={15} />Shared by <span translate="no">{event.hostName}</span>. Meetups are public.</p>}
           <button className={'greet-button greet-button--primary greet-rsvp ' + (going ? 'is-going' : '')} type="button" disabled={busy} onClick={() => signedIn ? void onRsvp() : onSignIn()}>
-            {going ? <><Check size={18} />You’re going</> : signedIn ? 'RSVP for this event' : 'Sign in to RSVP'}
+            {going ? <><Check size={18} />You’re going</> : signedIn ? 'I’m going' : 'Sign in to join'}
           </button>
-          {going && <p className="greet-rsvp-note" role="status">Your RSVP is saved to your account.</p>}
+          <p className="greet-rsvp-note">This shares that you plan to attend. It is not a ticket or formal registration.</p>
+          <section className="greet-event-attendees" aria-label="People going to this event">
+            <h2>{signedIn ? `${attendees.length} ${attendees.length === 1 ? 'person' : 'people'} going` : 'See who’s going'}</h2>
+            {!signedIn
+              ? <p>Sign in to see the member attendance list.</p>
+              : attendees.length
+                ? <ul>{attendees.map((attendee) => {
+                  const mine = attendee.userId === userId
+                  const relationship = friendships.find((item) =>
+                    (item.requester_id === userId && item.addressee_id === attendee.userId)
+                    || (item.addressee_id === userId && item.requester_id === attendee.userId))
+                  const incoming = relationship?.status === 'pending' && relationship.addressee_id === userId
+                  const sent = relationship?.status === 'pending' && relationship.requester_id === userId
+                  return <li key={attendee.userId}>
+                    <span translate={mine ? undefined : 'no'}>{attendee.displayName ?? 'LocalLoops member'}</span>
+                    {!mine && attendee.displayName && (relationship?.status === 'accepted'
+                      ? <small>Connected</small>
+                      : incoming
+                        ? <button type="button" className="greet-text-button" onClick={() => relationship && onAcceptConnection(relationship.id)}>Accept</button>
+                        : sent
+                          ? <small>Request sent</small>
+                          : <button type="button" className="greet-text-button" onClick={() => onSayHello(attendee.userId)}>Say hello</button>)}
+                  </li>
+                })}</ul>
+                : <p>Be the first to say you’re going.</p>}
+            <small className="greet-event-attendees__privacy">Attendance is visible to signed-in members. Names appear for discoverable neighbors and your connections.</small>
+          </section>
           <div className="greet-event-safety"><MapPin size={16} /><p>Check the original listing before you go. Public-event times and venue details can change.</p></div>
         </aside>
       </div>

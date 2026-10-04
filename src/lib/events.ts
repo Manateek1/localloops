@@ -2,7 +2,6 @@ import type { CommunityEvent, EventSource, LocationResult } from '../data/models
 import type { EventRow, ProfileRow } from './supabase/database.types'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './supabase/database.types'
-import { EVENT_SEARCH_RADIUS_MILES } from '../data/constants'
 
 export type EventFeedState = {
   ticketmaster: 'ready' | 'not_configured' | 'unavailable'
@@ -25,15 +24,19 @@ export const emptySources: EventFeedState = {
   community: 'not_configured',
 }
 
-export async function getSourcedEvents(location: LocationResult): Promise<EventFeed> {
+export async function getSourcedEvents(location: LocationResult, radius: number): Promise<EventFeed> {
   try {
-    const params = new URLSearchParams({
-      lat: String(location.latitude),
-      lon: String(location.longitude),
-      radius: String(EVENT_SEARCH_RADIUS_MILES),
-      state: location.stateCode,
+    const response = await fetch('/api/events', {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      body: JSON.stringify({
+        latitude: location.latitude,
+        longitude: location.longitude,
+        radius,
+        stateCode: location.stateCode,
+      }),
     })
-    const response = await fetch(`/api/events?${params}`)
     if (!response.ok) throw new Error('Event search is unavailable right now.')
     const payload = await response.json() as {
       events?: CommunityEvent[]
@@ -62,9 +65,9 @@ const milesBetween = (lat1: number, lon1: number, lat2: number, lon2: number) =>
 export async function getCommunityEvents(
   client: SupabaseClient<Database> | null,
   location: LocationResult,
+  radius: number,
 ): Promise<CommunityEventFeed> {
   if (!client) return { events: [], status: 'not_configured', error: null }
-  const radius = EVENT_SEARCH_RADIUS_MILES
   const until = new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString()
   const latDelta = radius / 69
   const longitudeDelta = Math.min(180, radius / (69 * Math.max(0.1, Math.cos(location.latitude * Math.PI / 180))))
