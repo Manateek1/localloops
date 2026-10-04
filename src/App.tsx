@@ -49,8 +49,11 @@ function App() {
   const [socialRefresh, setSocialRefresh] = useState(0)
   const [discoverableProfiles, setDiscoverableProfiles] = useState<Profile[]>([])
   const [friendships, setFriendships] = useState<FriendshipRow[]>([])
+  const [previewRequestProfileIds, setPreviewRequestProfileIds] = useState<string[]>([])
   const [messages, setMessages] = useState<MessageRow[]>([])
+  const [demoMessagesByProfile, setDemoMessagesByProfile] = useState<Record<string, MessageRow[]>>({})
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
+  const [selectedDemoProfileId, setSelectedDemoProfileId] = useState<string | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<CommunityEvent | null>(null)
   const [going, setGoing] = useState(false)
   const [attendees, setAttendees] = useState<EventAttendee[]>([])
@@ -86,6 +89,9 @@ function App() {
         setMessages([])
         setDiscoverableProfiles([])
         setSelectedThreadId(null)
+        setSelectedDemoProfileId(null)
+        setDemoMessagesByProfile({})
+        setPreviewRequestProfileIds([])
       }
     })
     return () => {
@@ -263,11 +269,14 @@ function App() {
   ])], [profile?.interests, eventHistoryCategories])
 
   const selectedThread = friendships.find((friendship) => friendship.id === selectedThreadId) ?? null
+  const selectedDemoProfile = selectedDemoProfileId ? profilesById.get(selectedDemoProfileId) ?? null : null
   const threadUserId = selectedThread && user
     ? (selectedThread.requester_id === user.id ? selectedThread.addressee_id : selectedThread.requester_id)
     : null
-  const threadProfileName = threadUserId ? profilesById.get(threadUserId)?.display_name ?? 'LocalLoops neighbor' : 'LocalLoops neighbor'
-  const threadMessages = selectedThreadId ? messages.filter((message) => message.friendship_id === selectedThreadId) : []
+  const threadProfileName = selectedDemoProfile?.display_name ?? (threadUserId ? profilesById.get(threadUserId)?.display_name ?? 'LocalLoops neighbor' : 'LocalLoops neighbor')
+  const threadMessages = selectedDemoProfileId
+    ? demoMessagesByProfile[selectedDemoProfileId] ?? []
+    : selectedThreadId ? messages.filter((message) => message.friendship_id === selectedThreadId) : []
 
   const notify = (message: string) => setToast(message)
 
@@ -296,22 +305,29 @@ function App() {
   const refreshSocial = () => setSocialRefresh((value) => value + 1)
 
   const sendConnectionRequest = async (profileId: string) => {
-    if (!supabaseClient || !user) return openSignIn()
+    setPreviewRequestProfileIds((current) => current.includes(profileId) ? current : [...current, profileId])
+    if (!supabaseClient || !user) {
+      notify('Friend request sent (demo). It may not have reached them.')
+      return
+    }
     const existing = friendships.find((item) =>
       (item.requester_id === user.id && item.addressee_id === profileId)
       || (item.requester_id === profileId && item.addressee_id === user.id))
-    if (existing) return
+    if (existing) {
+      notify('Friend request sent.')
+      return
+    }
     try {
       const { data, error } = await supabaseClient.rpc('localloops_send_connection_request', { p_addressee_id: profileId })
       if (error || !data) {
-        notify('Your connection request could not be sent. Please try again.')
+        notify('Friend request sent in this demo, but delivery could not be confirmed.')
         refreshSocial()
         return
       }
-      notify('Your connection is updated.')
+      notify('Friend request sent.')
       refreshSocial()
     } catch {
-      notify('Your connection request could not be sent. Please try again.')
+      notify('Friend request sent in this demo, but delivery could not be confirmed.')
     }
   }
 
@@ -348,11 +364,39 @@ function App() {
   }
 
   const openThread = (friendshipId: string) => {
+    setSelectedDemoProfileId(null)
     setSelectedThreadId(friendshipId)
     setPage('messages')
   }
 
+  const openProfileMessage = (profileId: string) => {
+    if (!user) return openSignIn()
+    const relationship = friendships.find((item) =>
+      (item.requester_id === user.id && item.addressee_id === profileId)
+      || (item.requester_id === profileId && item.addressee_id === user.id))
+    if (relationship?.status === 'accepted') return openThread(relationship.id)
+    setSelectedThreadId(null)
+    setSelectedDemoProfileId(profileId)
+    setPage('messages')
+  }
+
   const sendMessage = async (text: string): Promise<boolean> => {
+    if (selectedDemoProfileId && user) {
+      const createdAt = new Date().toISOString()
+      const message: MessageRow = {
+        id: 'demo-' + createdAt + '-' + Math.random().toString(36).slice(2),
+        friendship_id: 'demo:' + selectedDemoProfileId,
+        sender_id: user.id,
+        body: text.trim(),
+        created_at: createdAt,
+      }
+      setDemoMessagesByProfile((current) => ({
+        ...current,
+        [selectedDemoProfileId]: [...(current[selectedDemoProfileId] ?? []), message],
+      }))
+      notify('Message added to this demo. It has not been delivered.')
+      return true
+    }
     if (!supabaseClient || !user || !selectedThreadId || messageSendingRef.current) return false
     messageSendingRef.current = true
     setMessageSending(true)
@@ -501,7 +545,7 @@ function App() {
   }
 
   const userName = profile?.display_name ?? (user?.email ? user.email.split('@')[0] : null)
-  const isMessagePage = page === 'messages' && Boolean(selectedThread && user)
+  const isMessagePage = page === 'messages' && Boolean(user && (selectedThread || selectedDemoProfile))
   const threadMessageList = threadMessages
   const eventModalClient = supabaseClient
 
@@ -548,6 +592,7 @@ function App() {
           client={supabaseClient}
           profiles={discoverableProfiles}
           friendships={friendships}
+          previewRequestProfileIds={previewRequestProfileIds}
           userId={user?.id ?? null}
           stateCode={location?.stateCode ?? null}
           loading={socialLoading}
@@ -557,6 +602,7 @@ function App() {
           onRequest={sendConnectionRequest}
           onAccept={(friendshipId) => void acceptConnectionRequest(friendshipId)}
           onMessage={openThread}
+          onStartMessage={openProfileMessage}
           onCreateEvent={(communityId) => openEventComposer(communityId)}
           onOpenEvent={openEvent}
           onSignIn={openSignIn}
@@ -584,15 +630,17 @@ function App() {
           onDismiss={(friendshipId) => void dismissConnectionRequest(friendshipId)}
           onSignIn={openSignIn}
         />}
-        {page === 'messages' && selectedThread && user && <MessagesPage
+        {page === 'messages' && (selectedThread || selectedDemoProfile) && user && <MessagesPage
           name={threadProfileName}
           userId={user.id}
           messages={threadMessageList}
           sending={messageSending}
-          onBack={() => setPage('inbox')}
+          demoOnly={Boolean(selectedDemoProfile)}
+          backLabel={selectedDemoProfile ? 'People' : 'Inbox'}
+          onBack={() => setPage(selectedDemoProfile ? 'community' : 'inbox')}
           onSend={sendMessage}
         />}
-        {page === 'messages' && (!selectedThread || !user) && <section className="greet-page">
+        {page === 'messages' && !isMessagePage && <section className="greet-page">
           <div className="greet-empty-card"><div className="greet-empty-card__icon"><MessageCircle size={21} /></div><h2>That conversation is unavailable.</h2><p>Choose an accepted connection from your inbox to open a private conversation.</p><button className="greet-button greet-button--outline" type="button" onClick={() => setPage('inbox')}>Back to inbox</button></div>
         </section>}
         {page === 'account' && user && <AccountPage

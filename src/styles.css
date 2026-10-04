@@ -260,7 +260,7 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-tag-list { display: flex; flex-wrap: wrap; gap: 5px; }
 .greet-tag-list span { padding: 4px 8px; border-radius: 999px; color: #45614c; background: #e8eee5; font-size: 9px; font-weight: 650; }
 .greet-member-match { margin: 5px 0 0; color: #5f7a55; font-size: 10px; font-weight: 700; }
-.greet-member-action { display: flex; justify-content: flex-end; }
+.greet-member-action { display: flex; justify-content: flex-end; gap: 7px; }
 .greet-member-action .greet-button { min-width: 105px; min-height: 36px; }
 .greet-inbox-card { overflow: hidden; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); }
 .greet-inbox-tabs { display: flex; gap: 23px; padding: 0 19px; border-bottom: 1px solid #eeece4; }
@@ -489,7 +489,7 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
   .greet-member-card h2 { font-size: 12px; }
   .greet-member-location { font-size: 9px; }
   .greet-member-bio { font-size: 9px; }
-  .greet-member-action { grid-column: 2; justify-content: flex-start; margin-top: -2px; }
+  .greet-member-action { grid-column: 1 / -1; justify-content: flex-start; flex-wrap: wrap; margin-top: -2px; }
   .greet-member-action .greet-button { min-height: 32px; font-size: 9px; }
   .greet-privacy-note { margin-top: 10px; }
   .greet-inbox-card { border-radius: 16px; }

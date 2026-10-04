@@ -10,6 +10,7 @@ type CommunityPageProps = {
   client: SupabaseClient<Database> | null
   profiles: Profile[]
   friendships: FriendshipRow[]
+  previewRequestProfileIds: string[]
   userId: string | null
   stateCode: string | null
   loading: boolean
@@ -19,6 +20,7 @@ type CommunityPageProps = {
   onRequest: (profileId: string) => Promise<void>
   onAccept: (friendshipId: string) => void
   onMessage: (friendshipId: string) => void
+  onStartMessage: (profileId: string) => void
   onCreateEvent: (communityId: string) => void
   onOpenEvent: (event: CommunityEvent) => void
   onSignIn: () => void
@@ -60,7 +62,7 @@ function asCommunityEvent(event: EventRow, hostName: string | undefined): Commun
   }
 }
 
-export function CommunityPage({ client, profiles, friendships, userId, stateCode, loading, error, onRetry, profile, onRequest, onAccept, onMessage, onCreateEvent, onOpenEvent, onSignIn }: CommunityPageProps) {
+export function CommunityPage({ client, profiles, friendships, previewRequestProfileIds, userId, stateCode, loading, error, onRetry, profile, onRequest, onAccept, onMessage, onStartMessage, onCreateEvent, onOpenEvent, onSignIn }: CommunityPageProps) {
   const { language } = useLanguage()
   const [section, setSection] = useState<CommunitySection>('communities')
   const [communityList, setCommunityList] = useState<CommunityList>('discover')
@@ -392,11 +394,22 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
                 const matchedInterests = sharedInterests(person)
                 const accepted = relationship?.status === 'accepted'
                 const incoming = relationship?.status === 'pending' && relationship.addressee_id === userId
-                const sent = relationship?.status === 'pending' && relationship.requester_id === userId
+                const sent = (relationship?.status === 'pending' && relationship.requester_id === userId) || previewRequestProfileIds.includes(person.id)
                 return <article className="greet-member-card" key={person.id}>
                   {person.avatar_url ? <img className="greet-member-avatar" src={person.avatar_url} alt="" referrerPolicy="no-referrer" /> : <span className="greet-member-avatar greet-member-avatar--initials" aria-hidden="true">{initials(person.display_name)}</span>}
                   <div className="greet-member-card__body"><h2 translate="no">{person.display_name}</h2>{person.home_region && <p className="greet-member-location" translate="no"><MapPin size={13} />{person.home_region}</p>}{person.bio && <p className="greet-member-bio" translate="no">{person.bio}</p>}{matchedInterests.length > 0 && <p className="greet-member-match">Shares {matchedInterests.slice(0, 3).join(', ')} with you</p>}{person.interests.length > 0 && <div className="greet-tag-list" translate="no">{person.interests.slice(0, 5).map((interest) => <span key={interest}>{interest}</span>)}</div>}</div>
-                  <div className="greet-member-action">{accepted ? <button className="greet-button greet-button--outline" type="button" onClick={() => relationship && onMessage(relationship.id)}><MessageCircle size={15} />Message</button> : incoming ? <button className="greet-button greet-button--soft" type="button" onClick={() => relationship && onAccept(relationship.id)}><Check size={15} />Accept</button> : sent ? <button className="greet-button greet-button--quiet" type="button" disabled>Request sent</button> : <button className="greet-button greet-button--outline" type="button" disabled={requestingProfileId === person.id} onClick={() => void requestConnection(person.id)}><UserRoundPlus size={15} />{requestingProfileId === person.id ? 'Sending…' : 'Say hello'}</button>}</div>
+                  <div className="greet-member-action">
+                    {accepted
+                      ? <button className="greet-button greet-button--outline" type="button" onClick={() => relationship && onMessage(relationship.id)}><MessageCircle size={15} />Message</button>
+                      : <>
+                          {incoming
+                            ? <button className="greet-button greet-button--soft" type="button" onClick={() => relationship && onAccept(relationship.id)}><Check size={15} />Accept</button>
+                            : sent
+                            ? <button className="greet-button greet-button--quiet" type="button" disabled><Check size={15} />Friend request sent</button>
+                              : <button className="greet-button greet-button--outline" type="button" disabled={requestingProfileId === person.id} onClick={() => void requestConnection(person.id)}><UserRoundPlus size={15} />{requestingProfileId === person.id ? 'Sending…' : 'Say hello'}</button>}
+                          <button className="greet-button greet-button--outline" type="button" onClick={() => onStartMessage(person.id)}><MessageCircle size={15} />Message</button>
+                        </>}
+                  </div>
                 </article>
               })}
               {!visibleProfiles.length && <div className="greet-empty-card greet-empty-card--wide"><div className="greet-empty-card__icon"><Leaf size={21} /></div><h2>{peopleList === 'friends' ? query ? 'No friends match that search.' : friendProfileIds.size ? 'Friend profiles are temporarily unavailable.' : 'No friends yet.' : discoverableProfileCount ? query ? 'No neighbors match that search yet.' : 'You’re caught up on nearby people.' : 'Your community is just getting started.'}</h2><p>{peopleList === 'friends' ? query ? 'Try another name or clear your search.' : friendProfileIds.size ? 'Try refreshing to load your accepted connections.' : 'Discover people nearby and say hello to start a connection.' : discoverableProfileCount ? query ? 'Try another name, region, or interest.' : 'Discoverable members will appear here when someone new joins your community.' : 'When people nearby join LocalLoops and opt in to discovery, they will appear here. Invite a library, local group, or neighbor to get things started.'}</p>{peopleList === 'friends' && <button className="greet-button greet-button--outline" type="button" onClick={() => query ? setQuery('') : friendProfileIds.size ? onRetry() : setPeopleList('discover')}>{query ? 'Clear search' : friendProfileIds.size ? 'Refresh friends' : 'Discover people'}</button>}</div>}
