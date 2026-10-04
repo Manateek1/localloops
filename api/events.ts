@@ -1,3 +1,5 @@
+import { US_STATES } from '../src/data/models.ts'
+
 type VercelRequest = { method?: string; url?: string }
 type VercelResponse = {
   setHeader(name: string, value: string): void
@@ -8,7 +10,7 @@ type VercelResponse = {
 type PublicEvent = {
   id: string
   sourceId: string
-  source: 'ticketmaster' | 'nps'
+  source: 'ticketmaster' | 'nps' | 'ticketfairy'
   sourceName: string
   sourceUrl: string | null
   title: string
@@ -37,6 +39,28 @@ const milesBetween = (lat1: number, lon1: number, lat2: number, lon2: number) =>
 }
 
 const asText = (value: unknown) => typeof value === 'string' ? value.trim() : ''
+
+type TicketFairyEvent = {
+  url?: string | null
+  displayName?: string
+  subtitle?: string | null
+  description?: string | null
+  shortDescription?: string | null
+  eventTypes?: string[]
+  tags?: string[]
+  startDate?: string
+  imageURL?: string | null
+  startingPrice?: { amount?: string; currency?: string } | null
+  venue?: {
+    name?: string | null
+    country?: string | null
+    state?: string | null
+    city?: string | null
+    hidden?: boolean
+    latitude?: string | null
+    longitude?: string | null
+  } | null
+}
 
 function encodeGeohash(latitude: number, longitude: number, precision = 6) {
   const alphabet = '0123456789bcdefghjkmnpqrstuvwxyz'
@@ -201,6 +225,103 @@ async function getNpsEvents(latitude: number, longitude: number, radius: number,
   })
 }
 
+function getTicketFairyEventUrl(value: unknown) {
+  const raw = asText(value)
+  if (!raw) return null
+  try {
+    const url = new URL(raw)
+    if (url.protocol !== 'https:' || !['ticketfairy.com', 'www.ticketfairy.com'].includes(url.hostname)) return null
+    return url.toString()
+  } catch {
+    return null
+  }
+}
+
+async function getTicketFairyEvents(
+  latitude: number,
+  longitude: number,
+  radius: number,
+  stateCode: string,
+): Promise<PublicEvent[]> {
+  const stateName = US_STATES.find(([code]) => code === stateCode)?.[1]
+  if (!stateName) return []
+
+  const today = new Date()
+  const end = new Date(today.getTime() + 120 * 24 * 60 * 60 * 1000)
+  const params = new URLSearchParams({
+    country: 'us',
+    state: stateName,
+    section_type: 'upcoming',
+    sort: 'start_date',
+    order: 'asc',
+    from: today.toISOString().slice(0, 10),
+    to: end.toISOString().slice(0, 10),
+    size: '200',
+  })
+  const response = await fetch(`https://www.ticketfairy.com/api/v1/events/listing?${params}`, {
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(8000),
+  })
+  if (!response.ok) throw new Error(`Ticket Fairy returned ${response.status}`)
+  const payload = await response.json() as {
+    success?: boolean
+    data?: { events?: TicketFairyEvent[] }
+  }
+  if (payload.success !== true) throw new Error('Ticket Fairy returned an unsuccessful response')
+
+  return (payload.data?.events ?? []).flatMap((event): PublicEvent[] => {
+    const venue = event.venue
+    // Do not place events with intentionally hidden venue details on a precise map pin.
+    if (!venue || venue.hidden === true || asText(venue.country).toLowerCase() !== 'us') return []
+
+    const lat = validCoordinate(venue.latitude)
+    const lon = validCoordinate(venue.longitude)
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lon) || lon < -180 || lon > 180) return []
+    const distanceMiles = milesBetween(latitude, longitude, lat, lon)
+    if (distanceMiles > radius) return []
+
+    const sourceUrl = getTicketFairyEventUrl(event.url)
+    const sourceId = sourceUrl ? new URL(sourceUrl).pathname.replace(/\/+$/, '') : ''
+    const title = asText(event.displayName)
+    const city = asText(venue.city)
+    const returnedState = asText(venue.state)
+    const matchedState = US_STATES.find(([code, name]) =>
+      code === returnedState.toUpperCase() || name.toLowerCase() === returnedState.toLowerCase())
+    const startsAt = asText(event.startDate)
+    const startTime = Date.parse(startsAt)
+    const now = Date.now()
+    const endTime = now + 120 * 24 * 60 * 60 * 1000
+    if (!sourceId || !title || !matchedState || matchedState[0] !== stateCode
+      || !Number.isFinite(startTime) || startTime < now || startTime > endTime) return []
+
+    const price = Number(event.startingPrice?.amount)
+    const category = event.eventTypes?.map(asText).find(Boolean)
+      || event.tags?.map(asText).find(Boolean)
+      || 'Community event'
+    return [{
+      id: `ticketfairy:${sourceId}`,
+      sourceId,
+      source: 'ticketfairy',
+      sourceName: 'Ticket Fairy',
+      sourceUrl,
+      title,
+      description: asText(event.shortDescription) || asText(event.description) || asText(event.subtitle),
+      startsAt,
+      timeLabel: null,
+      venue: asText(venue.name) || city || 'Public venue',
+      city,
+      state: returnedState || stateName,
+      stateCode,
+      latitude: lat,
+      longitude: lon,
+      imageUrl: asText(event.imageURL) || null,
+      category,
+      isFree: event.startingPrice && Number.isFinite(price) ? price === 0 : null,
+      distanceMiles,
+    }]
+  })
+}
+
 export default async function handler(request: VercelRequest, response: VercelResponse) {
   response.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=3600')
   if (request.method !== 'GET') return response.status(405).json({ error: 'Use GET.' })
@@ -217,13 +338,15 @@ export default async function handler(request: VercelRequest, response: VercelRe
     return response.status(400).json({ error: 'Provide a valid location and two-letter state code.' })
   }
 
-  const sources: Record<'ticketmaster' | 'nps', 'ready' | 'not_configured' | 'unavailable'> = {
+  const sources: Record<'ticketmaster' | 'nps' | 'ticketfairy', 'ready' | 'not_configured' | 'unavailable'> = {
     ticketmaster: process.env.TICKETMASTER_API_KEY ? 'ready' : 'not_configured',
     nps: process.env.NPS_API_KEY ? 'ready' : 'not_configured',
+    ticketfairy: 'ready',
   }
   const results = await Promise.allSettled([
     getTicketmasterEvents(latitude, longitude, radius),
     getNpsEvents(latitude, longitude, radius, stateCode),
+    getTicketFairyEvents(latitude, longitude, radius, stateCode),
   ])
   const events: PublicEvent[] = []
   const errors: string[] = []
@@ -240,6 +363,13 @@ export default async function handler(request: VercelRequest, response: VercelRe
   } else {
     sources.nps = 'unavailable'
     errors.push('National Park Service event search is temporarily unavailable.')
+  }
+  if (results[2].status === 'fulfilled') {
+    sources.ticketfairy = 'ready'
+    events.push(...results[2].value)
+  } else {
+    sources.ticketfairy = 'unavailable'
+    errors.push('Ticket Fairy event search is temporarily unavailable.')
   }
   events.sort((a, b) => (a.startsAt ?? '').localeCompare(b.startsAt ?? ''))
   return response.status(200).json({ events, sources, errors })

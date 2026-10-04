@@ -16,7 +16,7 @@ import type { FriendshipRow, MessageRow, ProfileRow } from './lib/supabase/datab
 import { supabaseClient } from './lib/supabase/client'
 import { TranslationNotice } from './features/LanguageProvider'
 
-const noSources: EventFeedState = { ticketmaster: 'not_configured', nps: 'not_configured' }
+const noSources: EventFeedState = { ticketmaster: 'not_configured', nps: 'not_configured', ticketfairy: 'not_configured' }
 
 function App() {
   const [page, setPage] = useState<Page>('explore')
@@ -416,6 +416,7 @@ function App() {
           sources={feedSources}
           errors={feedErrors}
           locationError={locationError}
+          communityAvailable={Boolean(supabaseClient)}
           query={locationQuery}
           radius={radius}
           onQueryChange={(value) => { setLocationQuery(value); setLocationError('') }}

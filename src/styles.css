@@ -129,6 +129,7 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-map-marker--nps { background: #718958; }
 .greet-map-marker--community { background: #e19265; }
 .greet-map-marker--ticketmaster { background: #0b4a37; }
+.greet-map-marker--ticketfairy { background: #715da0; }
 .greet-map-search-center { position: relative; display: block; width: 24px; height: 24px; border: 3px solid #fff; border-radius: 50%; background: rgba(225,146,101,.28); box-shadow: 0 0 0 7px rgba(225,146,101,.2), 0 2px 8px rgba(22,54,37,.25); }
 .greet-map-search-center::after { content: ''; position: absolute; inset: 6px; border-radius: 50%; background: #d36f54; }
 .greet-search-status { min-height: 1em; }
@@ -153,6 +154,7 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-event-card:not(.is-compact) .greet-event-card__visual { width: 100%; height: 176px; flex-basis: 176px; }
 .greet-event-card__placeholder { width: 100%; height: 100%; display: grid; place-items: center; color: #55745a; background: radial-gradient(circle at 65% 34%, #f3e2bd 0 7%, transparent 7.5%), linear-gradient(140deg, #eaf0e6, #cbd9c7 58%, #dae6df); }
 .greet-event-card__placeholder--ticketmaster { background: linear-gradient(150deg,#e5efe6,#d7e4d1 50%,#f1dfc2); }
+.greet-event-card__placeholder--ticketfairy { color: #67578c; background: linear-gradient(140deg,#eee8f7,#d6d3eb 55%,#f1dfd0); }
 .greet-event-card__placeholder--nps { color: #55724c; background: linear-gradient(140deg,#eaf0e6,#c9d8c1 55%,#e8dec5); }
 .greet-event-card__placeholder--community { color: #637a55; background: linear-gradient(140deg,#f3eddc,#d9e5d2 56%,#e8d7bc); }
 .greet-event-card__source { position: absolute; left: 8px; bottom: 8px; padding: 5px 7px; border: 1px solid rgba(255,255,255,.76); border-radius: 7px; background: rgba(255,254,250,.91); color: var(--forest); font-size: 9px; font-weight: 750; }
