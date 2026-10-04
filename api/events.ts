@@ -1,7 +1,7 @@
 import { US_STATES } from '../src/data/models.ts'
 import { EVENT_SEARCH_RADIUS_MILES } from '../src/data/constants.ts'
 
-type VercelRequest = { method?: string; url?: string }
+type VercelRequest = { method?: string; body?: unknown }
 type VercelResponse = {
   setHeader(name: string, value: string): void
   status(code: number): VercelResponse
@@ -63,7 +63,10 @@ type TicketFairyEvent = {
   } | null
 }
 
-function encodeGeohash(latitude: number, longitude: number, precision = 8) {
+const ticketFairyCache = new Map<string, { expiresAt: number; events: TicketFairyEvent[] }>()
+const ticketFairyInFlight = new Map<string, Promise<TicketFairyEvent[]>>()
+
+function encodeGeohash(latitude: number, longitude: number, precision = 6) {
   const alphabet = '0123456789bcdefghjkmnpqrstuvwxyz'
   let latRange: [number, number] = [-90, 90]
   let lonRange: [number, number] = [-180, 180]
@@ -107,7 +110,9 @@ async function getTicketmasterEvents(latitude: number, longitude: number, radius
     apikey: key,
     countryCode: 'US',
     geoPoint: encodeGeohash(latitude, longitude),
-    radius: String(radius),
+    // The upstream searches around the center of this privacy-coarsened geohash.
+    // Widen its candidate search slightly, then keep only results inside the user's radius below.
+    radius: String(Math.min(250, radius + 2)),
     unit: 'miles',
     size: '100',
     sort: 'date,asc',
@@ -138,7 +143,7 @@ async function getTicketmasterEvents(latitude: number, longitude: number, radius
     const distanceMiles = milesBetween(latitude, longitude, lat, lon)
     const sourceId = asText(event.id)
     const title = asText(event.name)
-    if (!sourceId || !title || distanceMiles > EVENT_SEARCH_RADIUS_MILES) return []
+    if (!sourceId || !title || distanceMiles > radius) return []
     return [{
       id: `ticketmaster:${sourceId}`,
       sourceId,
@@ -259,18 +264,53 @@ async function getTicketFairyEvents(
     to: end.toISOString().slice(0, 10),
     size: '200',
   })
-  const response = await fetch(`https://www.ticketfairy.com/api/v1/events/listing?${params}`, {
-    headers: { Accept: 'application/json' },
-    signal: AbortSignal.timeout(8000),
-  })
-  if (!response.ok) throw new Error(`Ticket Fairy returned ${response.status}`)
-  const payload = await response.json() as {
-    success?: boolean
-    data?: { events?: TicketFairyEvent[] }
+  const cacheKey = `${stateCode}:${params.get('from')}:${params.get('to')}`
+  let stateEvents = ticketFairyCache.get(cacheKey)
+  if (!stateEvents || stateEvents.expiresAt <= Date.now()) {
+    const pending = ticketFairyInFlight.get(cacheKey)
+    let fetchStateEvents = pending
+    if (!fetchStateEvents) {
+      fetchStateEvents = (async () => {
+        const fetchPage = async (page?: number) => {
+          const pageParams = new URLSearchParams(params)
+          if (page) pageParams.set('page', String(page))
+          const response = await fetch(`https://www.ticketfairy.com/api/v1/events/listing?${pageParams}`, {
+            headers: { Accept: 'application/json' },
+            signal: AbortSignal.timeout(4000),
+          })
+          if (!response.ok) throw new Error(`Ticket Fairy returned ${response.status}`)
+          return await response.json() as {
+            success?: boolean
+            data?: { events?: TicketFairyEvent[]; pagination?: { totalPages?: number; totalCount?: number } }
+          }
+        }
+        const firstPage = await fetchPage()
+        if (firstPage.success !== true) throw new Error('Ticket Fairy returned an unsuccessful response')
+        const pageCount = Math.min(5, Math.max(1, Number(firstPage.data?.pagination?.totalPages) || 1))
+        const additionalPages = await Promise.all(
+          Array.from({ length: pageCount - 1 }, (_, index) => fetchPage(index + 2)),
+        )
+        if (additionalPages.some((page) => page.success !== true)) {
+          throw new Error('Ticket Fairy returned an incomplete event listing')
+        }
+        return [
+          ...(firstPage.data?.events ?? []),
+          ...additionalPages.flatMap((page) => page.data?.events ?? []),
+        ]
+      })()
+      ticketFairyInFlight.set(cacheKey, fetchStateEvents)
+    }
+    try {
+      const fetchedEvents = await fetchStateEvents
+      stateEvents = { expiresAt: Date.now() + 5 * 60 * 1000, events: fetchedEvents }
+      ticketFairyCache.set(cacheKey, stateEvents)
+      for (const [key, value] of ticketFairyCache) if (value.expiresAt <= Date.now()) ticketFairyCache.delete(key)
+    } finally {
+      ticketFairyInFlight.delete(cacheKey)
+    }
   }
-  if (payload.success !== true) throw new Error('Ticket Fairy returned an unsuccessful response')
 
-  return (payload.data?.events ?? []).flatMap((event): PublicEvent[] => {
+  return stateEvents.events.flatMap((event): PublicEvent[] => {
     const venue = event.venue
     // Do not place events with intentionally hidden venue details on a precise map pin.
     if (!venue || venue.hidden === true || asText(venue.country).toLowerCase() !== 'us') return []
@@ -324,17 +364,19 @@ async function getTicketFairyEvents(
 }
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
-  response.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=3600')
-  if (request.method !== 'GET') return response.status(405).json({ error: 'Use GET.' })
+  response.setHeader('Cache-Control', 'private, no-store, max-age=0')
+  response.setHeader('Vary', 'Authorization')
+  if (request.method !== 'POST') return response.status(405).json({ error: 'Use POST.' })
 
-  const url = new URL(request.url ?? '/', 'https://localloops.invalid')
-  const latitude = Number(url.searchParams.get('lat'))
-  const longitude = Number(url.searchParams.get('lon'))
-  const radius = EVENT_SEARCH_RADIUS_MILES
-  const stateCode = (url.searchParams.get('state') ?? '').toUpperCase()
+  const body = request.body as { latitude?: unknown; longitude?: unknown; radius?: unknown; stateCode?: unknown } | null
+  const latitude = Number(body?.latitude)
+  const longitude = Number(body?.longitude)
+  const requestedRadius = Number(body?.radius ?? EVENT_SEARCH_RADIUS_MILES)
+  const radius = Math.min(250, Math.max(5, Number.isFinite(requestedRadius) ? requestedRadius : EVENT_SEARCH_RADIUS_MILES))
+  const stateCode = typeof body?.stateCode === 'string' ? body.stateCode.toUpperCase() : ''
   if (!Number.isFinite(latitude) || Math.abs(latitude) > 90
     || !Number.isFinite(longitude) || Math.abs(longitude) > 180
-    || !/^[A-Z]{2}$/.test(stateCode)) {
+    || (!US_STATES.some(([code]) => code === stateCode) && stateCode !== 'DC')) {
     return response.status(400).json({ error: 'Provide a valid location and two-letter state code.' })
   }
 
@@ -344,7 +386,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
     ticketfairy: 'ready',
   }
   const results = await Promise.allSettled([
-    getTicketmasterEvents(latitude, longitude, radius + 1),
+    getTicketmasterEvents(latitude, longitude, radius),
     getNpsEvents(latitude, longitude, radius, stateCode),
     getTicketFairyEvents(latitude, longitude, radius, stateCode),
   ])

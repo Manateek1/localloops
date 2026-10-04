@@ -26,7 +26,7 @@ function localApi(): Plugin {
           },
         }
         const invoke = () => { void handler({ method: request.method, url: request.url }, wrapped).catch(next) }
-        if (!['/api/translate', '/api/guide'].includes(pathname) || request.method !== 'POST') {
+        if (request.method !== 'POST') {
           invoke()
           return
         }
@@ -52,7 +52,6 @@ function localApi(): Plugin {
           }
           try {
             const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown
-            const handler = pathname === '/api/guide' ? guideHandler : translateHandler
             void handler({ method: request.method, url: request.url, body }, wrapped).catch(next)
           } catch {
             response.statusCode = 400

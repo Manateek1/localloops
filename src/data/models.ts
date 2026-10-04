@@ -9,6 +9,8 @@ export type LocationResult = {
   latitude: number
   longitude: number
   zoom: number
+  approximate?: boolean
+  geocoder?: string
 }
 
 export type CommunityEvent = {
@@ -45,6 +47,11 @@ export type Profile = {
   interests: string[]
   discoverable: boolean
   created_at: string
+}
+
+export type EventAttendee = {
+  userId: string
+  displayName?: string
 }
 
 export const INTEREST_OPTIONS = [

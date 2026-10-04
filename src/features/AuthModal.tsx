@@ -21,7 +21,7 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
     setError('')
     setMessage('')
     if (!client) {
-      setError('Sign-in is not connected yet. The team needs to add the LocalLoops Supabase project URL and publishable key.')
+      setError('Sign-in is not connected yet. The team needs to add the LocalLoops project URL, publishable key, and project ref.')
       return
     }
     setBusy(true)
@@ -30,6 +30,9 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
         const { data, error: signupError } = await client.auth.signUp({
           email: email.trim(),
           password,
+          options: {
+            data: { localloops_app: true },
+          },
         })
         if (signupError) throw signupError
         if (data.session) onClose()
@@ -53,9 +56,9 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
         <div className="greet-auth-card__mark"><Leaf size={20} /></div>
         <p className="greet-eyebrow">A little closer to community</p>
         <h2 id="auth-title">{!client ? 'Account access is coming soon.' : mode === 'sign-in' ? 'Welcome back.' : 'Come on in.'}</h2>
-        <p className="greet-auth-card__copy">{!client ? 'LocalLoops is preparing its member accounts.' : mode === 'sign-in' ? 'Sign in to save your plans and meet real neighbors.' : 'Create an account to RSVP, host a gathering, and meet neighbors.'}</p>
+        <p className="greet-auth-card__copy">{!client ? 'LocalLoops member accounts are being connected to their own database.' : mode === 'sign-in' ? 'Sign in to save your plans and meet real neighbors.' : 'Create an account to mark plans, host a gathering, and meet neighbors.'}</p>
 
-        {!client ? <div className="greet-auth-setup" role="status"><Leaf size={18} /><p>The Supabase connection is not configured on this deployment yet. The team can enable sign-in once the LocalLoops project is connected.</p></div> : <>
+        {!client ? <div className="greet-auth-setup" role="status"><Leaf size={18} /><p>Sign-in and hosting will be available when the LocalLoops Supabase connection and database setup are complete.</p></div> : <>
           <div className="greet-auth-switch" role="tablist" aria-label="Account action">
             <button type="button" role="tab" aria-selected={mode === 'sign-in'} className={mode === 'sign-in' ? 'is-active' : ''} onClick={() => { setMode('sign-in'); setError(''); setMessage('') }}>Sign in</button>
             <button type="button" role="tab" aria-selected={mode === 'create'} className={mode === 'create' ? 'is-active' : ''} onClick={() => { setMode('create'); setError(''); setMessage('') }}>Create account</button>

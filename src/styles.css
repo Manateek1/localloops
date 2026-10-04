@@ -77,7 +77,9 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-location-search > svg { flex: 0 0 auto; margin-left: 2px; }
 .greet-location-search input { flex: 1; min-width: 0; height: 47px; padding: 0 8px; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 15px; }
 .greet-location-search input::placeholder { color: #939a91; }
-.greet-search-help { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 4px 3px 0; color: #818980; font-size: 10px; }
+.greet-search-help { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; padding: 4px 3px 0; color: #818980; font-size: 10px; }
+.greet-search-help > label { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; color: #596a5d; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.greet-search-help select { min-height: 29px; padding: 0 23px 0 9px; border: 1px solid #dfe4d8; border-radius: 9px; color: #405a49; background: #fffefa; font-size: 10px; cursor: pointer; }
 .greet-radius-note { display: inline-flex; align-items: center; gap: 5px; color: #596a5d; font-weight: 700; }
 .greet-explore-panel { padding: 18px; border: 1px solid var(--border); border-radius: 24px; background: rgba(255, 254, 250, .8); box-shadow: 0 14px 38px rgba(39, 55, 43, .035); }
 .greet-explore-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 2px 2px 15px; }
@@ -118,12 +120,13 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-map-marker--ticketfairy { background: #715da0; }
 .greet-map-search-center { position: relative; display: block; width: 24px; height: 24px; border: 3px solid #fff; border-radius: 50%; background: rgba(225,146,101,.28); box-shadow: 0 0 0 7px rgba(225,146,101,.2), 0 2px 8px rgba(22,54,37,.25); }
 .greet-map-search-center::after { content: ''; position: absolute; inset: 6px; border-radius: 50%; background: #d36f54; }
-.greet-search-status { min-height: 1em; }
+.greet-search-status { flex: 1 1 180px; min-height: 1em; }
 .greet-search-status.is-error { color: #a94437; }
 .greet-source-strip { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 17px; padding: 12px 3px 0; color: #607166; font-size: 10px; }
 .greet-source-strip > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .greet-source-strip svg { color: var(--forest); }
 .greet-source-strip__label { color: var(--muted); font-size: 9px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.greet-source-strip__unavailable { color: var(--muted); }
 .greet-source-dot { color: #d99b68; font-size: 12px; }
 .greet-list-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 1px 1px 12px; }
 .greet-list-heading h2 { margin: 0 0 3px; color: #26352d; font-size: 19px; }
@@ -366,6 +369,14 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-community-event-note svg { flex: 0 0 auto; color: var(--forest); }
 .greet-rsvp { width: 100%; min-height: 46px; margin-top: 15px; font-size: 13px; }
 .greet-rsvp-note { margin: 8px 0 0; color: var(--forest); font-size: 9px; text-align: center; }
+.greet-event-attendees { padding: 13px 0 2px; margin-top: 12px; border-top: 1px solid #eceae1; }
+.greet-event-attendees h2 { margin: 0 0 8px; color: #324239; font-size: 12px; }
+.greet-event-attendees p { margin: 0 0 8px; color: #758076; font-size: 9px; line-height: 1.45; }
+.greet-event-attendees ul { display: grid; gap: 5px; padding: 0; margin: 0 0 8px; list-style: none; }
+.greet-event-attendees li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 29px; padding: 5px 8px; border: 1px solid #e6ebe3; border-radius: 9px; color: #405346; background: #f8f9f5; font-size: 9px; }
+.greet-event-attendees li small { color: #758076; font-size: 8px; }
+.greet-event-attendees li .greet-text-button { padding: 2px 0; font-size: 8px; }
+.greet-event-attendees__privacy { display: block; color: #7d887d; font-size: 8px; line-height: 1.45; }
 .greet-event-safety { display: flex; align-items: flex-start; gap: 7px; padding-top: 14px; margin-top: 14px; border-top: 1px solid #eceae1; color: #758076; }
 .greet-event-safety svg { flex: 0 0 auto; color: #81907f; }
 .greet-event-safety p { margin: 0; font-size: 9px; line-height: 1.5; }
@@ -568,6 +579,8 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
   .greet-location-search .greet-button { min-height: 35px; padding: 0 8px; font-size: 9px; }
   .greet-location-search .greet-button svg { display: none; }
   .greet-search-help { align-items: flex-start; font-size: 8px; }
+  .greet-search-help > label, .greet-search-help select { font-size: 8px; }
+  .greet-search-help select { min-height: 25px; padding-right: 18px; }
   .greet-radius-note { gap: 4px; font-size: 8px; }
   .greet-explore-panel { padding: 9px; }
   .greet-area-label { gap: 7px; }
