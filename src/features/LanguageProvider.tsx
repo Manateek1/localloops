@@ -1,65 +1,31 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Globe2 } from 'lucide-react'
 import { FALLBACK_LANGUAGES, nativeLanguageName, type TranslationLanguage } from '../lib/languages'
+import { translateOfflineText } from '../lib/offlineTranslations'
 
 type LanguageContextValue = {
   language: string
   setLanguage: (code: string) => void
   languages: TranslationLanguage[]
-  loadLanguages: () => void
-  translationStatus: string
 }
 
 type TranslationContextProps = { children: ReactNode }
-type TextRecord = { source: string; lastValue: string | null; language: string | null }
-type AttributeRecord = { source: string; lastValue: string | null; language: string | null }
-type TranslationResponse = { translations?: Array<{ translatedText?: string }>; code?: string }
-type TranslationLanguageResponse = { languages?: TranslationLanguage[] }
+type TextRecord = { source: string; rendered: string; language: string | null; translated: string | null }
+type AttributeRecord = { source: string; rendered: string; language: string | null; translated: string | null }
 
 const LanguageContext = createContext<LanguageContextValue | null>(null)
-const ignoredSelector = 'script,style,noscript,textarea,input,[contenteditable="true"],[translate="no"],[data-translation-ignore],.greet-language-picker,.greet-translation-notice,.greet-map,.maplibregl-ctrl-attrib'
-const translatableAttributes = ['placeholder', 'aria-label', 'title'] as const
-const cacheStorageKey = 'localloops.google-translations.v1'
-const legacyCacheStorageKey = 'greetme.google-translations.v1'
+const supportedCodes = new Set(FALLBACK_LANGUAGES.map(({ code }) => code))
+const ignoredTextSelector = 'script,style,noscript,textarea,input,[contenteditable="true"],[translate="no"],[data-translation-ignore],.maplibregl-ctrl-attrib,.greet-language-picker option'
+const ignoredAttributeSelector = 'script,style,noscript,[contenteditable="true"],[translate="no"],[data-translation-ignore],.maplibregl-ctrl-attrib,.greet-language-picker option'
+const translatableAttributes = ['placeholder', 'aria-label', 'title', 'alt'] as const
 
 function initialLanguage() {
   try {
-    return window.localStorage.getItem('localloops.language')
-      ?? window.localStorage.getItem('greetme.language')
-      ?? 'en'
+    const saved = window.localStorage.getItem('localloops.language')
+    return saved && supportedCodes.has(saved) ? saved : 'en'
   } catch {
     return 'en'
   }
-}
-
-function loadCache() {
-  try {
-    const saved = JSON.parse(window.localStorage.getItem(cacheStorageKey)
-      ?? window.localStorage.getItem(legacyCacheStorageKey)
-      ?? '{}') as Record<string, string>
-    return new Map(Object.entries(saved))
-  } catch {
-    return new Map<string, string>()
-  }
-}
-
-function saveCache(cache: Map<string, string>) {
-  try {
-    const entries = [...cache.entries()].slice(-1200)
-    window.localStorage.setItem(cacheStorageKey, JSON.stringify(Object.fromEntries(entries)))
-  } catch {
-    // The translator still works when browser storage is full or disabled.
-  }
-}
-
-function cacheKey(language: string, source: string) {
-  return `${language}\u0000${source}`
-}
-
-function decodeTranslatedText(text: string) {
-  const element = document.createElement('textarea')
-  element.innerHTML = text
-  return element.value
 }
 
 function preserveWhitespace(source: string, translated: string) {
@@ -68,255 +34,165 @@ function preserveWhitespace(source: string, translated: string) {
   return leading + translated.trim() + trailing
 }
 
-function canTranslate(text: string) {
-  const length = text.trim().length
-  return length > 1 && length <= 4200 && /[a-z]{2}/i.test(text)
+function decodedAttribute(value: string) {
+  const element = document.createElement('textarea')
+  element.innerHTML = value
+  return element.value
 }
 
 export function LanguageProvider({ children }: TranslationContextProps) {
   const [language, setLanguageState] = useState(initialLanguage)
-  const [languages, setLanguages] = useState(FALLBACK_LANGUAGES)
-  const [languagesLoaded, setLanguagesLoaded] = useState(false)
-  const [translationStatus, setTranslationStatus] = useState('')
   const textRecords = useRef(new WeakMap<Text, TextRecord>())
   const attributeRecords = useRef(new WeakMap<Element, Map<string, AttributeRecord>>())
-  const cache = useRef<Map<string, string> | null>(null)
-  if (!cache.current) cache.current = loadCache()
 
-  const setLanguage = useCallback((code: string) => {
+  const setLanguage = (code: string) => {
+    if (!supportedCodes.has(code)) return
     setLanguageState(code)
-    setTranslationStatus('')
     try {
       window.localStorage.setItem('localloops.language', code)
     } catch {
-      // Language selection remains available for this visit without storage.
+      // The selection still applies for this visit when browser storage is unavailable.
     }
-  }, [])
-
-  const loadLanguages = useCallback(() => {
-    if (languagesLoaded) return
-    setLanguagesLoaded(true)
-    void fetch('/api/translate?action=languages')
-      .then(async (response) => {
-        if (!response.ok) return null
-        return await response.json() as TranslationLanguageResponse
-      })
-      .then((result) => {
-        if (result?.languages?.length) {
-          const fullList = result.languages.some((item) => item.code === 'en') ? result.languages : [{ code: 'en', name: 'English' }, ...result.languages]
-          if (!fullList.some((item) => item.code === language)) {
-            const selected = FALLBACK_LANGUAGES.find((item) => item.code === language)
-            if (selected) fullList.push(selected)
-          }
-          setLanguages(fullList.sort((left, right) => left.code === 'en' ? -1 : right.code === 'en' ? 1 : left.name.localeCompare(right.name)))
-        }
-      })
-      .catch(() => undefined)
-  }, [language, languagesLoaded])
+  }
 
   useEffect(() => {
     const root = document.getElementById('root')
     document.documentElement.lang = language
     if (!root) return
 
-    let stopped = false
-    let failed = false
-    let inFlight = false
-    let pending = false
-    let scheduled: number | undefined
     const textState = textRecords.current
     const attributeState = attributeRecords.current
-    const translationCache = cache.current!
 
-    const resetEnglish = () => {
+    const restoreEnglish = () => {
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
       let node: Node | null
       while ((node = walker.nextNode())) {
-        const textNode = node as Text
-        const record = textState.get(textNode)
-        if (record?.lastValue && textNode.data === record.lastValue) textNode.data = record.source
-        if (record) {
-          record.lastValue = null
-          record.language = null
-        }
+        const text = node as Text
+        const record = textState.get(text)
+        if (!record) continue
+        if (text.data !== record.rendered) record.source = text.data
+        if (record.translated !== null && text.data === record.rendered) text.data = record.source
+        record.rendered = text.data
+        record.language = null
+        record.translated = null
       }
+
       root.querySelectorAll('*').forEach((element) => {
         const records = attributeState.get(element)
         if (!records) return
-        for (const [attribute, record] of records) {
-          if (record.lastValue && element.getAttribute(attribute) === record.lastValue) element.setAttribute(attribute, record.source)
-          record.lastValue = null
+        records.forEach((record, attribute) => {
+          const current = element.getAttribute(attribute) ?? ''
+          if (current !== record.rendered) record.source = current
+          if (record.translated !== null && element.getAttribute(attribute) === record.rendered) {
+            element.setAttribute(attribute, record.source)
+          }
+          record.rendered = element.getAttribute(attribute) ?? ''
           record.language = null
-        }
+          record.translated = null
+        })
       })
     }
 
-    if (language === 'en') {
-      resetEnglish()
-      setTranslationStatus('')
-    } else {
-      setTranslationStatus('Translating page…')
-    }
+    restoreEnglish()
 
-    const skipped = (element: Element | null) => Boolean(element?.closest(ignoredSelector))
+    const isIgnoredText = (element: Element | null) => Boolean(element?.closest(ignoredTextSelector))
+    const isIgnoredAttribute = (element: Element | null) => Boolean(element?.closest(ignoredAttributeSelector))
 
-    const getTextSource = (node: Text) => {
-      const current = node.data
-      const record = textState.get(node)
+    const translateText = (text: Text) => {
+      if (isIgnoredText(text.parentElement)) return
+      let record = textState.get(text)
       if (!record) {
-        const created = { source: current, lastValue: null, language: null }
-        textState.set(node, created)
-        return created.source
-      }
-      if (record.lastValue && current !== record.lastValue) {
-        record.source = current
-        record.lastValue = null
+        record = { source: text.data, rendered: text.data, language: null, translated: null }
+        textState.set(text, record)
+      } else if (text.data !== record.rendered) {
+        record.source = text.data
+        record.rendered = text.data
         record.language = null
+        record.translated = null
       }
-      return record.source
+      if (record.language === language) return
+
+      const translated = language === 'en' ? null : translateOfflineText(record.source, language)
+      const value = translated === null ? record.source : preserveWhitespace(record.source, translated)
+      if (text.data !== value) text.data = value
+      record.rendered = value
+      record.language = language
+      record.translated = translated === null ? null : value
     }
 
-    const getAttributeSource = (element: Element, attribute: string) => {
+    const translateAttribute = (element: Element, attribute: typeof translatableAttributes[number]) => {
+      if (isIgnoredAttribute(element)) return
+      const current = element.getAttribute(attribute)
+      if (current === null) return
       let records = attributeState.get(element)
       if (!records) {
         records = new Map()
         attributeState.set(element, records)
       }
-      const current = element.getAttribute(attribute) ?? ''
       let record = records.get(attribute)
       if (!record) {
-        record = { source: current, lastValue: null, language: null }
+        record = { source: current, rendered: current, language: null, translated: null }
         records.set(attribute, record)
-      } else if (record.lastValue && current !== record.lastValue) {
+      } else if (current !== record.rendered) {
         record.source = current
-        record.lastValue = null
+        record.rendered = current
         record.language = null
+        record.translated = null
       }
-      return record
+      if (record.language === language) return
+
+      const translated = language === 'en' ? null : translateOfflineText(record.source, language)
+      const value = translated === null ? record.source : decodedAttribute(translated)
+      if (current !== value) element.setAttribute(attribute, value)
+      record.rendered = value
+      record.language = language
+      record.translated = translated === null ? null : value
     }
 
-    const collect = () => {
-      const entries: Array<{ source: string; apply: (translated: string) => void }> = []
+    const translateTree = () => {
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
       let node: Node | null
-      while ((node = walker.nextNode())) {
-        const textNode = node as Text
-        if (skipped(textNode.parentElement)) continue
-        const source = getTextSource(textNode)
-        if (!canTranslate(source)) continue
-        const record = textState.get(textNode)!
-        if (record.lastValue && record.language === language && textNode.data === record.lastValue) continue
-        entries.push({
-          source,
-          apply: (translated) => {
-            const currentRecord = textState.get(textNode)!
-            const value = preserveWhitespace(source, translated)
-            textNode.data = value
-            currentRecord.lastValue = value
-            currentRecord.language = language
-          },
-        })
-      }
-
+      while ((node = walker.nextNode())) translateText(node as Text)
       root.querySelectorAll('*').forEach((element) => {
-        if (skipped(element)) return
-        for (const attribute of translatableAttributes) {
-          if (!element.hasAttribute(attribute)) continue
-          const record = getAttributeSource(element, attribute)
-          if (!canTranslate(record.source)) continue
-          if (record.lastValue && record.language === language && element.getAttribute(attribute) === record.lastValue) continue
-          entries.push({
-            source: record.source,
-            apply: (translated) => {
-              const value = decodeTranslatedText(translated)
-              element.setAttribute(attribute, value)
-              record.lastValue = value
-              record.language = language
-            },
+        for (const attribute of translatableAttributes) translateAttribute(element, attribute)
+      })
+    }
+
+    translateTree()
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'characterData') translateText(mutation.target as Text)
+        if (mutation.type === 'attributes' && mutation.target instanceof Element) {
+          for (const attribute of translatableAttributes) translateAttribute(mutation.target, attribute)
+        }
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach((added) => {
+            if (added.nodeType === Node.TEXT_NODE) translateText(added as Text)
+            else if (added instanceof Element) {
+              const walker = document.createTreeWalker(added, NodeFilter.SHOW_TEXT)
+              let node: Node | null
+              while ((node = walker.nextNode())) translateText(node as Text)
+              for (const attribute of translatableAttributes) translateAttribute(added, attribute)
+              added.querySelectorAll('*').forEach((element) => {
+                for (const attribute of translatableAttributes) translateAttribute(element, attribute)
+              })
+            }
           })
         }
-      })
-      return entries
-    }
-
-    const translate = async () => {
-      if (stopped || failed || language === 'en') return
-      if (inFlight) {
-        pending = true
-        return
       }
-      inFlight = true
-      try {
-        do {
-          pending = false
-          const entries = collect()
-          const uniqueTexts = [...new Set(entries.map((entry) => entry.source))]
-          const needed = uniqueTexts.filter((source) => !translationCache.has(cacheKey(language, source)))
-          for (let index = 0; index < needed.length;) {
-            const batch: string[] = []
-            let total = 0
-            while (index < needed.length && batch.length < 40) {
-              const next = needed[index]!
-              if (batch.length && total + next.length > 4200) break
-              batch.push(next)
-              total += next.length
-              index += 1
-            }
-            const response = await fetch('/api/translate', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ texts: batch, target: language }),
-            })
-            const result = await response.json().catch(() => ({})) as TranslationResponse
-            if (stopped) return
-            if (!response.ok || !result.translations || result.translations.length !== batch.length) {
-              failed = true
-              resetEnglish()
-              setTranslationStatus(result.code === 'translation_not_configured'
-                ? 'Google Translation is not configured. Add GOOGLE_TRANSLATE_API_KEY to the server environment.'
-                : 'Google Translation is unavailable right now. The page is shown in English.')
-              return
-            }
-            batch.forEach((source, offset) => {
-              const value = result.translations![offset]?.translatedText
-              if (value) translationCache.set(cacheKey(language, source), decodeTranslatedText(value))
-            })
-            saveCache(translationCache)
-          }
-          if (stopped) return
-          entries.forEach((entry) => {
-            const value = translationCache.get(cacheKey(language, entry.source))
-            if (value) entry.apply(value)
-          })
-        } while (pending && !stopped && !failed)
-        if (!stopped && !failed) setTranslationStatus('')
-      } catch {
-        if (stopped) return
-        failed = true
-        resetEnglish()
-        if (!stopped) setTranslationStatus('Google Translation is unavailable right now. The page is shown in English.')
-      } finally {
-        inFlight = false
-      }
-    }
-
-    const observer = new MutationObserver(() => {
-      if (language === 'en' || stopped || failed) return
-      if (scheduled) window.clearTimeout(scheduled)
-      scheduled = window.setTimeout(() => { void translate() }, 80)
     })
-    observer.observe(root, { childList: true, characterData: true, attributes: true, attributeFilter: [...translatableAttributes], subtree: true })
-    void translate()
-
-    return () => {
-      stopped = true
-      observer.disconnect()
-      if (scheduled) window.clearTimeout(scheduled)
-    }
+    observer.observe(root, {
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: [...translatableAttributes],
+      subtree: true,
+    })
+    return () => observer.disconnect()
   }, [language])
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, languages, loadLanguages, translationStatus }}>
+    <LanguageContext.Provider value={{ language, setLanguage, languages: FALLBACK_LANGUAGES }}>
       {children}
     </LanguageContext.Provider>
   )
@@ -329,21 +205,13 @@ export function useLanguage() {
 }
 
 export function LanguagePicker() {
-  const { language, setLanguage, languages, loadLanguages } = useLanguage()
+  const { language, setLanguage, languages } = useLanguage()
 
   return (
     <label className="greet-language-picker">
       <Globe2 size={16} aria-hidden="true" />
       <span className="sr-only">Choose site language</span>
-      <select
-        aria-label="Site language"
-        value={language}
-        onFocus={loadLanguages}
-        onChange={(event) => {
-          loadLanguages()
-          setLanguage(event.target.value)
-        }}
-      >
+      <select aria-label="Site language" value={language} onChange={(event) => setLanguage(event.target.value)}>
         {languages.map((item) => (
           <option key={item.code} value={item.code}>{item.code === 'en' ? 'English' : `${nativeLanguageName(item)} — ${item.name}`}</option>
         ))}
@@ -352,13 +220,23 @@ export function LanguagePicker() {
   )
 }
 
+const noticeCopy: Record<string, string> = {
+  en: 'Site controls use built-in translations. Event details, member names, and messages stay in their original language.',
+  es: 'Los controles del sitio usan traducciones integradas. Los detalles de eventos, nombres y mensajes conservan su idioma original.',
+  fr: 'Les commandes du site utilisent des traductions intégrées. Les événements, noms et messages restent dans leur langue d’origine.',
+  pt: 'Os controles do site usam traduções incluídas. Detalhes dos eventos, nomes e mensagens permanecem no idioma original.',
+  'zh-CN': '网站控件使用内置翻译。活动详情、成员姓名和消息保留原始语言。',
+  hi: 'साइट के नियंत्रण अंतर्निहित अनुवादों का उपयोग करते हैं। कार्यक्रम का विवरण, सदस्य के नाम और संदेश मूल भाषा में रहते हैं।',
+  vi: 'Các điều khiển trang web dùng bản dịch tích hợp. Chi tiết sự kiện, tên thành viên và tin nhắn vẫn giữ ngôn ngữ gốc.',
+}
+
 export function TranslationNotice() {
-  const { language, translationStatus } = useLanguage()
-  if (language === 'en' && !translationStatus) return null
+  const { language } = useLanguage()
+  if (language === 'en') return null
 
   return (
-    <div className="greet-translation-notice" role="status" aria-live="polite">
-      {translationStatus || 'Google translates public page and event text. Member details and private messages are not sent.'}
+    <div className="greet-translation-notice" data-translation-ignore role="status" aria-live="polite">
+      {noticeCopy[language] ?? noticeCopy.en}
     </div>
   )
 }

@@ -183,8 +183,7 @@ export function useCommunityGuideVoice({ events, location, language }: {
       conversationRef.current.push({ role: 'model', text: result.reply })
       conversationRef.current = conversationRef.current.slice(-MAX_HISTORY_TURNS)
 
-      const voiceName = result.voiceProvider === 'elevenlabs' ? 'ElevenLabs' : 'your browser’s voice'
-      await speakReply(result.reply, result.audioBase64, `Sprout is answering with ${voiceName}. Tap the button to interrupt.`)
+      await speakReply(result.reply, result.audioBase64, 'Sprout is answering. Tap the button to interrupt.')
     } catch (error) {
       setVoiceState('error')
       setStatusText(error instanceof Error ? error.message : 'The guide could not answer just now. Please try again.')
@@ -318,10 +317,10 @@ export function useCommunityGuideVoice({ events, location, language }: {
   }, [])
 
   const connectionNote = providers.grok && providers.elevenLabs
-    ? 'Grok 4.6 · ElevenLabs voice'
+    ? 'Your voice guide is ready.'
     : providers.grok
-      ? 'Grok 4.6 · browser voice backup'
-      : 'The voice guide is connecting'
+      ? 'Your voice guide is ready with browser voice.'
+      : 'Your voice guide is getting ready.'
 
   return { voiceState, statusText, connectionNote, onMainButton }
 }
