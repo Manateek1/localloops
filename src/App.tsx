@@ -87,9 +87,9 @@ function App() {
         setToast('Your session could not be checked. You can still try signing in.')
       }
     })
-    const { data } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+    const { data } = supabaseClient.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
-      setPage(pageForUser(session?.user ?? null))
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') setPage(pageForUser(session?.user ?? null))
       setAuthLoading(false)
       if (!session) {
         setProfile(null)
@@ -510,7 +510,11 @@ function App() {
           profile={profile}
           variant="onboarding"
           initialInterests={onboardingInterests}
-          onSave={(nextProfile) => { setProfile(nextProfile); setProfileRefresh((value) => value + 1) }}
+          onSave={(nextProfile) => {
+            setProfile(nextProfile)
+            setProfileRefresh((value) => value + 1)
+            if (nextProfile.home_region && nextProfile.state_code) profileLocationAttempted.current = user.id
+          }}
           onComplete={(nextProfile) => {
             setPage('explore')
             if (nextProfile.home_region && nextProfile.state_code) void submitLocation(`${nextProfile.home_region}, ${nextProfile.state_code}`)
