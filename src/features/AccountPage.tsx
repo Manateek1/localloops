@@ -37,22 +37,27 @@ export function AccountPage({ client, userId, profile, onSave }: AccountPageProp
     setBusy(true)
     setMessage('')
     setError('')
-    const result = await client.from('localloops_profiles').upsert({
-      id: userId,
-      display_name: name.trim(),
-      home_region: region.trim() || null,
-      state_code: stateCode || null,
-      bio: bio.trim() || null,
-      interests,
-      discoverable,
-    }).select('*').single()
-    setBusy(false)
-    if (result.error || !result.data) {
-      setError(result.error?.message ?? 'We could not save your profile.')
-      return
+    try {
+      const result = await client.from('localloops_profiles').upsert({
+        id: userId,
+        display_name: name.trim(),
+        home_region: region.trim() || null,
+        state_code: stateCode || null,
+        bio: bio.trim() || null,
+        interests,
+        discoverable,
+      }).select('*').single()
+      if (result.error || !result.data) {
+        setError(result.error?.message ?? 'We could not save your profile.')
+        return
+      }
+      onSave(result.data as Profile)
+      setMessage('Your profile is up to date.')
+    } catch {
+      setError('We could not save your profile. Check your connection and try again.')
+    } finally {
+      setBusy(false)
     }
-    onSave(result.data as Profile)
-    setMessage('Your profile is up to date.')
   }
 
   return (
@@ -72,7 +77,7 @@ export function AccountPage({ client, userId, profile, onSave }: AccountPageProp
         </div></fieldset>
         <button className="greet-privacy-toggle" type="button" onClick={() => setDiscoverable((value) => !value)} aria-pressed={discoverable}>
           {discoverable ? <Eye size={18} /> : <EyeOff size={18} />}
-          <span><strong>{discoverable ? 'Show me in Community' : 'Keep my profile private'}</strong><small>{discoverable ? 'Signed-in members can see your name, broad region, bio, and interests.' : 'Only you can see your profile details.'}</small></span>
+          <span><strong>{discoverable ? 'Show me in Community' : 'Keep my profile private'}</strong><small>{discoverable ? 'Signed-in members can see your name, broad region, bio, and interests.' : 'Only you and accepted friends can see your profile details.'}</small></span>
           <span className={`greet-switch ${discoverable ? 'is-on' : ''}`} aria-hidden="true"><i /></span>
         </button>
         {error && <p className="greet-form-message is-error" role="alert">{error}</p>}

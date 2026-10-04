@@ -12,8 +12,10 @@ type CommunityPageProps = {
   userId: string | null
   stateCode: string | null
   loading: boolean
+  error: string
+  onRetry: () => void
   profile: Profile | null
-  onRequest: (profileId: string) => void
+  onRequest: (profileId: string) => Promise<void>
   onAccept: (friendshipId: string) => void
   onMessage: (friendshipId: string) => void
   onCreateEvent: (communityId: string) => void
@@ -23,6 +25,7 @@ type CommunityPageProps = {
 
 type CommunitySection = 'communities' | 'people'
 type CommunityList = 'discover' | 'mine'
+type PeopleList = 'discover' | 'friends'
 type CommunitySummary = Pick<CommunityRow, 'id' | 'name' | 'description' | 'region_label' | 'member_count' | 'created_at'>
 
 function formatEventDate(value: string) {
@@ -56,9 +59,10 @@ function asCommunityEvent(event: EventRow, hostName: string | undefined): Commun
   }
 }
 
-export function CommunityPage({ client, profiles, friendships, userId, stateCode, loading, profile, onRequest, onAccept, onMessage, onCreateEvent, onOpenEvent, onSignIn }: CommunityPageProps) {
+export function CommunityPage({ client, profiles, friendships, userId, stateCode, loading, error, onRetry, profile, onRequest, onAccept, onMessage, onCreateEvent, onOpenEvent, onSignIn }: CommunityPageProps) {
   const [section, setSection] = useState<CommunitySection>('communities')
   const [communityList, setCommunityList] = useState<CommunityList>('discover')
+  const [peopleList, setPeopleList] = useState<PeopleList>('discover')
   const [query, setQuery] = useState('')
   const [communities, setCommunities] = useState<CommunitySummary[]>([])
   const [memberships, setMemberships] = useState<CommunityMemberRow[]>([])
@@ -74,6 +78,7 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
   const [formBusy, setFormBusy] = useState(false)
   const [communityActionError, setCommunityActionError] = useState('')
   const [busyCommunityId, setBusyCommunityId] = useState<string | null>(null)
+  const [requestingProfileId, setRequestingProfileId] = useState<string | null>(null)
   const [communityEvents, setCommunityEvents] = useState<EventRow[]>([])
   const [communityEventHosts, setCommunityEventHosts] = useState<Record<string, string>>({})
   const [communityEventsLoading, setCommunityEventsLoading] = useState(false)
@@ -155,14 +160,20 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
     const matchesSearch = `${community.name} ${community.description} ${community.region_label ?? ''}`.toLowerCase().includes(query.toLowerCase())
     return matchesList && matchesSearch
   }), [communities, communityList, memberCommunityIds, query])
+  const friendProfileIds = useMemo(() => new Set(friendships
+    .filter((friendship) => friendship.status === 'accepted' && userId && (friendship.requester_id === userId || friendship.addressee_id === userId))
+    .map((friendship) => friendship.requester_id === userId ? friendship.addressee_id : friendship.requester_id)), [friendships, userId])
+  const discoverableProfileCount = profiles.filter((person) => !friendProfileIds.has(person.id)).length
   const sharedInterests = (candidate: Profile) => {
     const candidateInterests = new Set(candidate.interests.map((interest) => interest.trim().toLowerCase()))
     return (profile?.interests ?? []).filter((interest) => candidateInterests.has(interest.trim().toLowerCase()))
   }
-  const visibleProfiles = useMemo(() => profiles.filter((item) =>
-    `${item.display_name} ${item.home_region ?? ''} ${item.interests.join(' ')} ${item.bio ?? ''}`
-      .toLowerCase().includes(query.toLowerCase()))
-    .sort((a, b) => sharedInterests(b).length - sharedInterests(a).length), [profiles, profile, query])
+  const visibleProfiles = useMemo(() => profiles.filter((item) => {
+    const isFriend = friendProfileIds.has(item.id)
+    const inSelectedList = peopleList === 'friends' ? isFriend : !isFriend
+    return inSelectedList && `${item.display_name} ${item.home_region ?? ''} ${item.interests.join(' ')} ${item.bio ?? ''}`
+      .toLowerCase().includes(query.toLowerCase())
+  }).sort((a, b) => sharedInterests(b).length - sharedInterests(a).length), [profiles, profile, query, peopleList, friendProfileIds])
   const initials = (value: string) => value.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'N'
 
   function relationshipWith(profileId: string) {
@@ -170,6 +181,15 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
     return friendships.find((relationship) =>
       (relationship.requester_id === userId && relationship.addressee_id === profileId)
       || (relationship.addressee_id === userId && relationship.requester_id === profileId))
+  }
+
+  async function requestConnection(profileId: string) {
+    setRequestingProfileId(profileId)
+    try {
+      await onRequest(profileId)
+    } finally {
+      setRequestingProfileId(null)
+    }
   }
 
   async function createCommunity(event: FormEvent<HTMLFormElement>) {
@@ -180,22 +200,27 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
     }
     setFormBusy(true)
     setFormError('')
-    const { data, error } = await client.rpc('localloops_create_community', {
-      p_name: name.trim(),
-      p_description: description.trim(),
-      p_region_label: region.trim() || null,
-    })
-    setFormBusy(false)
-    if (error || !data) {
-      setFormError(error?.message ?? 'Your community could not be created. Try again.')
-      return
+    try {
+      const { data, error } = await client.rpc('localloops_create_community', {
+        p_name: name.trim(),
+        p_description: description.trim(),
+        p_region_label: region.trim() || null,
+      })
+      if (error || !data) {
+        setFormError(error?.message ?? 'Your community could not be created. Try again.')
+        return
+      }
+      setName('')
+      setDescription('')
+      setCreateOpen(false)
+      setCommunityList('mine')
+      setSelectedCommunityId(data)
+      setCommunityRefresh((value) => value + 1)
+    } catch {
+      setFormError('Your community could not be created. Check your connection and try again.')
+    } finally {
+      setFormBusy(false)
     }
-    setName('')
-    setDescription('')
-    setCreateOpen(false)
-    setCommunityList('mine')
-    setSelectedCommunityId(data)
-    setCommunityRefresh((value) => value + 1)
   }
 
   async function joinCommunity(community: CommunitySummary) {
@@ -205,29 +230,39 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
     }
     setBusyCommunityId(community.id)
     setCommunityActionError('')
-    const { error } = await client.rpc('localloops_join_community', { p_community_id: community.id })
-    setBusyCommunityId(null)
-    if (error) {
-      setCommunityActionError(error.message)
-      return
+    try {
+      const { error } = await client.rpc('localloops_join_community', { p_community_id: community.id })
+      if (error) {
+        setCommunityActionError(error.message)
+        return
+      }
+      setSelectedCommunityId(community.id)
+      setCommunityRefresh((value) => value + 1)
+    } catch {
+      setCommunityActionError('You could not join this community. Check your connection and try again.')
+    } finally {
+      setBusyCommunityId(null)
     }
-    setSelectedCommunityId(community.id)
-    setCommunityRefresh((value) => value + 1)
   }
 
   async function leaveCommunity(community: CommunitySummary) {
     if (!userId || !client) return
     setBusyCommunityId(community.id)
     setCommunityActionError('')
-    const { error } = await client.rpc('localloops_leave_community', { p_community_id: community.id })
-    setBusyCommunityId(null)
-    if (error) {
-      setCommunityActionError(error.message)
-      return
+    try {
+      const { error } = await client.rpc('localloops_leave_community', { p_community_id: community.id })
+      if (error) {
+        setCommunityActionError(error.message)
+        return
+      }
+      setSelectedCommunityId(null)
+      setCommunityList('discover')
+      setCommunityRefresh((value) => value + 1)
+    } catch {
+      setCommunityActionError('You could not leave this community. Check your connection and try again.')
+    } finally {
+      setBusyCommunityId(null)
     }
-    setSelectedCommunityId(null)
-    setCommunityList('discover')
-    setCommunityRefresh((value) => value + 1)
   }
 
   return (
@@ -309,6 +344,8 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
                 </form>
               </section>}
 
+              {communityActionError && !selectedCommunity && <p className="greet-form-message is-error" role="alert">{communityActionError}</p>}
+
               <label className="greet-community-search"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search communities, interests, or towns" /></label>
 
               {!client ? <section className="greet-empty-card"><div className="greet-empty-card__icon"><Leaf size={21} /></div><h2>Community service is not connected yet.</h2><p>The site needs its LocalLoops database settings before people can create accounts or join communities.</p></section>
@@ -337,12 +374,17 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
         </>
       ) : (
         <>
-          <div className="greet-page-heading greet-people-heading"><p className="greet-eyebrow">Real neighbors, shared interests</p><h2>Meet people nearby.</h2><p>{stateName ? `Showing opt-in members who chose ${stateName} as their broad region, plus people connected to you.` : 'Only people who created a LocalLoops account and chose to be discoverable appear here.'}</p></div>
-          <label className="greet-community-search"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search names, regions, or interests" /></label>
+          <div className="greet-page-heading greet-people-heading"><p className="greet-eyebrow">Real neighbors, shared interests</p><h2>{peopleList === 'friends' ? 'Your friends.' : 'Meet people nearby.'}</h2><p>{peopleList === 'friends' ? 'Your accepted friends stay visible here even when their profiles are private to the public directory.' : stateName ? `Find discoverable members in ${stateName}, or switch to Friends to see your accepted connections.` : 'Browse members who opted into discovery, or switch to Friends to see your accepted connections.'}</p></div>
+          {userId && <div className="greet-community-subtabs greet-people-subtabs" role="tablist" aria-label="People lists">
+            <button type="button" role="tab" aria-selected={peopleList === 'discover'} className={peopleList === 'discover' ? 'is-active' : ''} onClick={() => setPeopleList('discover')}><Compass size={14} />Discover people</button>
+            <button type="button" role="tab" aria-selected={peopleList === 'friends'} className={peopleList === 'friends' ? 'is-active' : ''} onClick={() => setPeopleList('friends')}><Users size={14} />Friends<span>{friendProfileIds.size}</span></button>
+          </div>}
+          <label className="greet-community-search"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={peopleList === 'friends' ? 'Search your friends' : 'Search names, regions, or interests'} /></label>
           {!userId ? (
             <section className="greet-empty-card"><div className="greet-empty-card__icon"><Leaf size={21} /></div><h2>Sign in to meet your neighbors.</h2><p>People choose whether they appear in the member directory.</p><button className="greet-button greet-button--primary" type="button" onClick={onSignIn}>Sign in</button></section>
-          ) : loading ? <div className="greet-loading" role="status">Finding discoverable neighbors…</div> : (
-            <section className="greet-member-list" aria-label="Discoverable LocalLoops members">
+          ) : error ? <section className="greet-empty-card" role="alert"><div className="greet-empty-card__icon"><Leaf size={21} /></div><h2>People and friends could not load.</h2><p>{error}</p><button className="greet-button greet-button--outline" type="button" onClick={onRetry}>Try again</button></section>
+            : loading ? <div className="greet-loading" role="status">{peopleList === 'friends' ? 'Loading your friends…' : 'Finding discoverable neighbors…'}</div> : (
+            <section className="greet-member-list" aria-label={peopleList === 'friends' ? 'Your friends' : 'Discoverable LocalLoops members'}>
               {visibleProfiles.map((person) => {
                 const relationship = relationshipWith(person.id)
                 const matchedInterests = sharedInterests(person)
@@ -352,13 +394,13 @@ export function CommunityPage({ client, profiles, friendships, userId, stateCode
                 return <article className="greet-member-card" key={person.id}>
                   {person.avatar_url ? <img className="greet-member-avatar" src={person.avatar_url} alt="" referrerPolicy="no-referrer" /> : <span className="greet-member-avatar greet-member-avatar--initials" aria-hidden="true">{initials(person.display_name)}</span>}
                   <div className="greet-member-card__body"><h2 translate="no">{person.display_name}</h2>{person.home_region && <p className="greet-member-location" translate="no"><MapPin size={13} />{person.home_region}</p>}{person.bio && <p className="greet-member-bio" translate="no">{person.bio}</p>}{matchedInterests.length > 0 && <p className="greet-member-match">Shares {matchedInterests.slice(0, 3).join(', ')} with you</p>}{person.interests.length > 0 && <div className="greet-tag-list" translate="no">{person.interests.slice(0, 5).map((interest) => <span key={interest}>{interest}</span>)}</div>}</div>
-                  <div className="greet-member-action">{accepted ? <button className="greet-button greet-button--outline" type="button" onClick={() => relationship && onMessage(relationship.id)}><MessageCircle size={15} />Message</button> : incoming ? <button className="greet-button greet-button--soft" type="button" onClick={() => relationship && onAccept(relationship.id)}><Check size={15} />Accept</button> : sent ? <button className="greet-button greet-button--quiet" type="button" disabled>Request sent</button> : <button className="greet-button greet-button--outline" type="button" onClick={() => onRequest(person.id)}><UserRoundPlus size={15} />Say hello</button>}</div>
+                  <div className="greet-member-action">{accepted ? <button className="greet-button greet-button--outline" type="button" onClick={() => relationship && onMessage(relationship.id)}><MessageCircle size={15} />Message</button> : incoming ? <button className="greet-button greet-button--soft" type="button" onClick={() => relationship && onAccept(relationship.id)}><Check size={15} />Accept</button> : sent ? <button className="greet-button greet-button--quiet" type="button" disabled>Request sent</button> : <button className="greet-button greet-button--outline" type="button" disabled={requestingProfileId === person.id} onClick={() => void requestConnection(person.id)}><UserRoundPlus size={15} />{requestingProfileId === person.id ? 'Sending…' : 'Say hello'}</button>}</div>
                 </article>
               })}
-              {!visibleProfiles.length && <div className="greet-empty-card greet-empty-card--wide"><div className="greet-empty-card__icon"><Leaf size={21} /></div><h2>{profiles.length ? 'No neighbors match that search yet.' : 'Your community is just getting started.'}</h2><p>{profiles.length ? 'Try another name, region, or interest.' : 'When people nearby join LocalLoops and opt in to discovery, they will appear here. Invite a library, local group, or neighbor to get things started.'}</p></div>}
+              {!visibleProfiles.length && <div className="greet-empty-card greet-empty-card--wide"><div className="greet-empty-card__icon"><Leaf size={21} /></div><h2>{peopleList === 'friends' ? query ? 'No friends match that search.' : friendProfileIds.size ? 'Friend profiles are temporarily unavailable.' : 'No friends yet.' : discoverableProfileCount ? query ? 'No neighbors match that search yet.' : 'You’re caught up on nearby people.' : 'Your community is just getting started.'}</h2><p>{peopleList === 'friends' ? query ? 'Try another name or clear your search.' : friendProfileIds.size ? 'Try refreshing to load your accepted connections.' : 'Discover people nearby and say hello to start a connection.' : discoverableProfileCount ? query ? 'Try another name, region, or interest.' : 'Discoverable members will appear here when someone new joins your community.' : 'When people nearby join LocalLoops and opt in to discovery, they will appear here. Invite a library, local group, or neighbor to get things started.'}</p>{peopleList === 'friends' && <button className="greet-button greet-button--outline" type="button" onClick={() => query ? setQuery('') : friendProfileIds.size ? onRetry() : setPeopleList('discover')}>{query ? 'Clear search' : friendProfileIds.size ? 'Refresh friends' : 'Discover people'}</button>}</div>}
             </section>
           )}
-          <p className="greet-privacy-note"><MapPin size={14} />People choose whether they appear. LocalLoops shows broad regions only, never home addresses or live locations.</p>
+          <p className="greet-privacy-note"><MapPin size={14} />People can hide from public discovery and still share their profile with accepted friends. LocalLoops shows broad regions only, never home addresses or live locations.</p>
         </>
       )}
     </div>
