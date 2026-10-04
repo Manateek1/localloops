@@ -72,7 +72,7 @@ create policy "Members send a friend request to a discoverable member"
     and requester_id <> addressee_id
     and status = 'pending'
     and exists (
-      select 1 from public.localloops_profiles as recipient
+      select 1 from localloops.profiles as recipient
       where recipient.id = addressee_id and recipient.discoverable
     )
   );

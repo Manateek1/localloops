@@ -10,7 +10,7 @@ enabled = true
 port = 54321
 # Schemas to expose in your API. Tables, views and stored procedures in this schema will get API
 # endpoints. `public` and `graphql_public` schemas are included by default.
-schemas = ["public", "graphql_public"]
+schemas = ["public", "graphql_public", "localloops", "larpchatai"]
 # New public tables stay unreachable through the local Data API until an explicit GRANT is added.
 auto_expose_new_tables = false
 # Extra schemas to add to the search_path of every request.

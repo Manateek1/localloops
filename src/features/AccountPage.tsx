@@ -47,7 +47,7 @@ export function AccountPage({ client, userId, profile, onSave }: AccountPageProp
 
     setBusy(true)
     try {
-      const result = await client.from('localloops_profiles').update({
+      const result = await client.schema('localloops').from('profiles').update({
         display_name: displayName,
         home_region: region.trim() || null,
         state_code: stateCode || null,

@@ -112,7 +112,7 @@ function App() {
         p_display_name: typeof displayName === 'string' ? displayName : null,
       })
       if (ensureError) throw ensureError
-      const { data, error } = await supabaseClient.from('localloops_profiles').select('*').eq('id', user.id).maybeSingle()
+      const { data, error } = await supabaseClient.schema('localloops').from('profiles').select('*').eq('id', user.id).maybeSingle()
       if (error) throw error
       if (active) setProfile((data as Profile | null) ?? null)
     })().catch(() => {
@@ -179,7 +179,7 @@ function App() {
     setSocialError('')
     const client = supabaseClient
     const load = async () => {
-      let profileQuery = client.from('localloops_profiles').select('*').eq('discoverable', true).neq('id', user.id)
+      let profileQuery = client.schema('localloops').from('profiles').select('*').eq('discoverable', true).neq('id', user.id)
       if (location?.stateCode) profileQuery = profileQuery.eq('state_code', location.stateCode)
       const [profileResult, friendshipResult] = await Promise.all([
         profileQuery.order('created_at', { ascending: false }).limit(100),
@@ -193,7 +193,7 @@ function App() {
       setFriendships(relationRows)
       const linkedProfileIds = [...new Set(relationRows.flatMap((row) => [row.requester_id, row.addressee_id]).filter((id) => id !== user.id))]
       const linkedProfileResult = linkedProfileIds.length
-        ? await client.from('localloops_profiles').select('*').in('id', linkedProfileIds)
+        ? await client.schema('localloops').from('profiles').select('*').in('id', linkedProfileIds)
         : { data: [], error: null }
       if (linkedProfileResult.error) throw linkedProfileResult.error
       if (!active) return
@@ -445,7 +445,7 @@ function App() {
     const attendanceRows = attendanceResult.data ?? []
     const memberIds = [...new Set(attendanceRows.map((row) => row.user_id))]
     const { data: memberProfiles } = memberIds.length
-      ? await supabaseClient.from('localloops_profiles').select('id,display_name').in('id', memberIds)
+      ? await supabaseClient.schema('localloops').from('profiles').select('id,display_name').in('id', memberIds)
       : { data: [] }
     const namesById = new Map(((memberProfiles ?? []) as Pick<ProfileRow, 'id' | 'display_name'>[]).map((row) => [row.id, row.display_name]))
     setAttendees(attendanceRows.map((row) => ({

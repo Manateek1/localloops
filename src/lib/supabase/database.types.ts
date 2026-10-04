@@ -100,7 +100,6 @@ export type NotificationRow = {
 export type Database = {
   public: {
     Tables: {
-      localloops_profiles: TableShape<ProfileRow>
       localloops_communities: TableShape<CommunityRow>
       localloops_community_members: TableShape<CommunityMemberRow>
       localloops_events: TableShape<EventRow>
@@ -110,7 +109,9 @@ export type Database = {
       localloops_messages: TableShape<MessageRow>
       localloops_notifications: TableShape<NotificationRow>
     }
-    Views: Record<never, never>
+    Views: {
+      localloops_profiles: { Row: ProfileRow; Relationships: [] }
+    }
     Functions: {
       localloops_ensure_profile: {
         Args: { p_display_name?: string | null }
@@ -133,6 +134,15 @@ export type Database = {
         Returns: string
       }
     }
+    Enums: Record<never, never>
+    CompositeTypes: Record<never, never>
+  }
+  localloops: {
+    Tables: {
+      profiles: TableShape<ProfileRow>
+    }
+    Views: Record<never, never>
+    Functions: Record<never, never>
     Enums: Record<never, never>
     CompositeTypes: Record<never, never>
   }
