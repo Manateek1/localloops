@@ -546,3 +546,620 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
   .greet-ride-row small { grid-column: 2; }
   .greet-event-facts { grid-template-columns: 1fr; }
 }
+
+/* ==========================================================================
+   Voice Agent Companion (Sprout Voice Chat Interface)
+   ========================================================================== */
+.greet-agent-page {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* Central Voice Visualizer Stage */
+.greet-agent-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px 32px;
+  margin-bottom: 36px;
+  border: 1px solid rgba(220, 230, 215, 0.9);
+  border-radius: 28px;
+  background: radial-gradient(circle at 50% 30%, rgba(230, 242, 226, 0.85) 0%, rgba(247, 245, 238, 0.95) 70%), linear-gradient(135deg, #f2f7ef 0%, #faf6eb 100%);
+  box-shadow: 0 18px 48px rgba(32, 53, 42, 0.05);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Dynamic Animated Voice Orb */
+.greet-agent-orb {
+  position: relative;
+  width: 170px;
+  height: 170px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 24px;
+}
+
+.greet-agent-avatar {
+  position: relative;
+  z-index: 3;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #eaf2e6 0%, #d8e6d2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 28px rgba(11, 74, 55, 0.14), inset 0 2px 6px rgba(255, 255, 255, 0.8);
+  border: 3px solid #ffffff;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.greet-agent-avatar img {
+  width: 92px;
+  height: 92px;
+  object-fit: contain;
+  margin-top: 4px;
+}
+
+.greet-agent-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+/* Orb States */
+.greet-agent-orb--idle .greet-agent-avatar {
+  animation: floatOrb 4s ease-in-out infinite;
+}
+
+.greet-agent-orb--listening .greet-agent-ring--1 {
+  width: 146px;
+  height: 146px;
+  border: 2px solid rgba(46, 133, 94, 0.5);
+  background: rgba(46, 133, 94, 0.08);
+  opacity: 1;
+  animation: pulseRing 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.greet-agent-orb--listening .greet-agent-ring--2 {
+  width: 184px;
+  height: 184px;
+  border: 2px solid rgba(46, 133, 94, 0.3);
+  opacity: 1;
+  animation: pulseRing 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite 0.4s;
+}
+
+.greet-agent-orb--thinking .greet-agent-avatar {
+  transform: scale(0.96);
+  border-color: #f7d899;
+}
+
+.greet-agent-orb--thinking .greet-agent-ring--1 {
+  width: 155px;
+  height: 155px;
+  border: 2px dashed rgba(233, 182, 106, 0.8);
+  opacity: 1;
+  animation: spinRing 3s linear infinite;
+}
+
+.greet-agent-orb--speaking .greet-agent-avatar {
+  transform: scale(1.04);
+  box-shadow: 0 12px 36px rgba(11, 74, 55, 0.22);
+}
+
+.greet-agent-orb--speaking .greet-agent-ring--1 {
+  width: 150px;
+  height: 150px;
+  background: rgba(35, 122, 85, 0.12);
+  opacity: 1;
+  animation: pulseRing 1.4s ease-out infinite;
+}
+
+/* Soundwave Equalizer when Speaking */
+.greet-agent-live-wave {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 28px;
+  padding: 4px 10px;
+  background: rgba(23, 35, 31, 0.88);
+  backdrop-filter: blur(4px);
+  border-radius: 999px;
+}
+
+.greet-agent-live-wave span {
+  width: 3px;
+  border-radius: 3px;
+  background: #6ce4a4;
+  animation: equalizer 0.8s ease-in-out infinite alternate;
+}
+
+/* Live Status Badge */
+.greet-agent-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  margin-bottom: 18px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.greet-agent-status-badge > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+}
+
+.greet-agent-status-badge .is-listening {
+  color: #17543a;
+  background: #d8ecde;
+  border: 1px solid #b3dbbd;
+}
+
+.greet-agent-status-badge .is-thinking {
+  color: #7a5012;
+  background: #fdf1d6;
+  border: 1px solid #f6db9e;
+}
+
+.greet-agent-status-badge .is-speaking {
+  color: #114e36;
+  background: #d4ebd9;
+  border: 1px solid #a3d7ae;
+}
+
+.greet-agent-status-badge .is-idle {
+  color: #5d6e61;
+  background: #eef2e9;
+  border: 1px solid #dce4d5;
+}
+
+.greet-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #1e8354;
+  animation: pulseDot 1.2s ease-in-out infinite;
+}
+
+/* Spoken Dialogue Transcript */
+.greet-agent-dialogue {
+  width: min(100%, 640px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.greet-agent-bubble {
+  padding: 13px 18px;
+  border-radius: 18px;
+  text-align: left;
+}
+
+.greet-agent-bubble small {
+  display: block;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 5px;
+}
+
+.greet-agent-bubble p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.greet-agent-bubble--user {
+  align-self: flex-end;
+  background: var(--forest);
+  color: #ffffff;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 4px 14px rgba(11, 74, 55, 0.16);
+}
+
+.greet-agent-bubble--user small {
+  color: #b7e3ca;
+}
+
+.greet-agent-bubble--agent {
+  align-self: flex-start;
+  background: #ffffff;
+  color: #203529;
+  border: 1px solid #e2e8dc;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 4px 18px rgba(32, 53, 42, 0.04);
+}
+
+.greet-agent-bubble--agent small {
+  color: var(--forest);
+}
+
+/* Primary Voice Controls */
+.greet-agent-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.greet-agent-mic-btn {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--forest);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 10px 28px rgba(11, 74, 55, 0.28);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease;
+}
+
+.greet-agent-mic-btn:hover {
+  transform: scale(1.08);
+  background: var(--forest-dark);
+}
+
+.greet-agent-mic-btn.is-active {
+  background: #c94b32;
+  box-shadow: 0 10px 32px rgba(201, 75, 50, 0.35);
+  animation: pulseMic 1.8s infinite;
+}
+
+.greet-agent-mute-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid #dbe2d6;
+  background: #ffffff;
+  color: #55675b;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.greet-agent-mute-btn:hover {
+  border-color: #89a992;
+  color: var(--forest);
+  background: #f3f7f0;
+}
+
+/* Quick Voice Prompts */
+.greet-agent-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 680px;
+}
+
+.greet-agent-prompts-label {
+  font-size: 10px;
+  font-weight: 750;
+  color: #7b887d;
+  margin-right: 4px;
+}
+
+.greet-agent-pill {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #dde5d7;
+  background: #ffffff;
+  color: #3b4d41;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.greet-agent-pill:hover {
+  border-color: #78a284;
+  background: #f1f6ed;
+  color: var(--forest);
+  transform: translateY(-1px);
+}
+
+/* Toast Banner */
+.greet-agent-toast {
+  margin-top: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #eef6ec;
+  border: 1px solid #bfe0c6;
+  color: #1a583e;
+  font-size: 11px;
+  font-weight: 650;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Action Results Section */
+.greet-agent-results {
+  margin-top: 10px;
+}
+
+.greet-agent-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid #e1e7dc;
+  padding-bottom: 12px;
+}
+
+.greet-agent-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: #6a766c;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.greet-agent-tabs button:hover {
+  color: var(--forest);
+  background: #edf2e8;
+}
+
+.greet-agent-tabs button.is-active {
+  color: var(--forest);
+  background: #e5eee2;
+  border-color: #ccdcc7;
+}
+
+.greet-agent-section {
+  margin-bottom: 34px;
+}
+
+.greet-agent-section-header {
+  margin-bottom: 16px;
+}
+
+.greet-agent-section-header h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 4px;
+  color: #1f3327;
+  font-size: 18px;
+}
+
+.greet-agent-section-header p {
+  margin: 0;
+  color: #68756a;
+  font-size: 12px;
+}
+
+/* Event Cards in Agent View */
+.greet-agent-event-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 18px;
+}
+
+.greet-agent-card {
+  border: 1px solid #e1e6db;
+  border-radius: 18px;
+  background: #fffefa;
+  box-shadow: 0 6px 18px rgba(32, 53, 42, 0.035);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.greet-agent-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(32, 53, 42, 0.06);
+}
+
+.greet-agent-card__image {
+  position: relative;
+  height: 150px;
+  overflow: hidden;
+}
+
+.greet-agent-card__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.greet-agent-match-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(11, 74, 55, 0.9);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.greet-agent-card__body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.greet-agent-card__tag {
+  align-self: flex-start;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #eef3eb;
+  color: #385a43;
+  font-size: 9px;
+  font-weight: 750;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.greet-agent-card__body h4 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  color: #213528;
+  line-height: 1.3;
+}
+
+.greet-agent-card__location {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: #69786c;
+}
+
+.greet-agent-card__desc {
+  margin: 0 0 16px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #556358;
+  flex: 1;
+}
+
+/* Neighbor Cards in Agent View */
+.greet-agent-neighbor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 16px;
+}
+
+.greet-agent-card--neighbor {
+  padding: 18px;
+}
+
+.greet-agent-neighbor-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.greet-agent-neighbor-header h4 {
+  margin: 0;
+  font-size: 15px;
+  color: #23362a;
+}
+
+.greet-agent-card--neighbor .greet-member-bio {
+  margin: 0 0 14px;
+  font-size: 11px;
+  color: #5c6a5e;
+  line-height: 1.5;
+}
+
+.greet-agent-card--neighbor .greet-tag-list {
+  margin-bottom: 16px;
+}
+
+.greet-agent-card--neighbor .is-shared {
+  background: #d8eadc;
+  color: #175438;
+  font-weight: 750;
+}
+
+/* Interests Panel in Agent View */
+.greet-agent-interests-panel {
+  padding: 22px;
+  border-radius: 20px;
+  border: 1px solid #e1e7dc;
+  background: #fffefa;
+}
+
+.greet-agent-dev-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-top: 18px;
+  border-radius: 12px;
+  background: #f3f7f0;
+  border: 1px solid #dce6d8;
+  font-size: 11px;
+  color: #4b6151;
+  line-height: 1.5;
+}
+
+.greet-agent-dev-note svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--forest);
+}
+
+/* Animations */
+@keyframes floatOrb {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes pulseRing {
+  0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+}
+
+@keyframes spinRing {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes equalizer {
+  0% { height: 25%; }
+  100% { height: 100%; }
+}
+
+@keyframes pulseDot {
+  0%, 100% { transform: scale(0.9); opacity: 0.6; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+
+@keyframes pulseMic {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(201, 75, 50, 0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(201, 75, 50, 0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.greet-spin {
+  animation: spinRing 1.5s linear infinite;
+}
+
