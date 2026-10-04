@@ -126,6 +126,7 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
 .greet-source-strip > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .greet-source-strip svg { color: var(--forest); }
 .greet-source-strip__label { color: var(--muted); font-size: 9px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.greet-source-strip__unavailable { color: var(--muted); }
 .greet-source-dot { color: #d99b68; font-size: 12px; }
 .greet-list-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 1px 1px 12px; }
 .greet-list-heading h2 { margin: 0 0 3px; color: #26352d; font-size: 19px; }

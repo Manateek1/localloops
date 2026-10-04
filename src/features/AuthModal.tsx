@@ -30,6 +30,9 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
         const { data, error: signupError } = await client.auth.signUp({
           email: email.trim(),
           password,
+          options: {
+            data: { localloops_app: true },
+          },
         })
         if (signupError) throw signupError
         if (data.session) onClose()
@@ -55,7 +58,7 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
         <h2 id="auth-title">{!client ? 'Account access is coming soon.' : mode === 'sign-in' ? 'Welcome back.' : 'Come on in.'}</h2>
         <p className="greet-auth-card__copy">{!client ? 'LocalLoops member accounts are being connected to their own database.' : mode === 'sign-in' ? 'Sign in to save your plans and meet real neighbors.' : 'Create an account to mark plans, host a gathering, and meet neighbors.'}</p>
 
-        {!client ? <div className="greet-auth-setup" role="status"><Leaf size={18} /><p>Sign-in and hosting will be available when the dedicated LocalLoops Supabase project is active and its database setup is complete.</p></div> : <>
+        {!client ? <div className="greet-auth-setup" role="status"><Leaf size={18} /><p>Sign-in and hosting will be available when the LocalLoops Supabase connection and database setup are complete.</p></div> : <>
           <div className="greet-auth-switch" role="tablist" aria-label="Account action">
             <button type="button" role="tab" aria-selected={mode === 'sign-in'} className={mode === 'sign-in' ? 'is-active' : ''} onClick={() => { setMode('sign-in'); setError(''); setMessage('') }}>Sign in</button>
             <button type="button" role="tab" aria-selected={mode === 'create'} className={mode === 'create' ? 'is-active' : ''} onClick={() => { setMode('create'); setError(''); setMessage('') }}>Create account</button>

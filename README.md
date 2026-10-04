@@ -2,7 +2,7 @@
 
 LocalLoops helps people find public events and neighbors in their area, including rural communities where nearby plans may be spread across several towns. It searches live listings from Ticket Fairy and, when their keys are configured, Ticketmaster and the National Park Service. Members can host public gatherings and mark that they are going; LocalLoops never fills gaps with sample people or invented events.
 
-Location search accepts a U.S. street address, ZIP code, or town and state. Street addresses are matched by the U.S. Census Geocoder; ZIP and town searches use approximate postal-place centers. The default radius is 20 miles, with options to search farther. Search works across all 50 states, but event coverage depends on provider inventory and member posts. Ticket Fairy's public API returns state-filtered listings, so the app checks up to five pages per state and maps only events inside the chosen radius. The map uses OpenFreeMap tiles based on OpenStreetMap data.
+Location search accepts a U.S. street address, ZIP code, or town and state. Street addresses are matched by the U.S. Census Geocoder; ZIP and town searches use approximate postal-place centers. The default radius is 30 miles, with options to narrow it to 20 miles or search farther. Search works across all 50 states, but event coverage depends on provider inventory and member posts. Ticket Fairy's public API returns state-filtered listings, so the app checks up to five pages per state and maps only events inside the chosen radius. The map uses OpenFreeMap tiles based on OpenStreetMap data.
 
 ## Run locally
 
@@ -14,11 +14,11 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The Vite development server also runs the `/api/geocode` and `/api/events` handlers locally. Address, ZIP, and town search needs no API key. Ticket Fairy is the no-key live event source; Ticketmaster and National Park Service are optional key-backed sources. Sign-in, member profiles, gatherings, shared attendance, ride coordination, connection requests, and messages need a separately configured LocalLoops Supabase project.
+The Vite development server also runs the `/api/geocode` and `/api/events` handlers locally. Address, ZIP, and town search needs no API key. Ticket Fairy is the no-key live event source; Ticketmaster and National Park Service are optional key-backed sources. Sign-in, member profiles, gatherings, shared attendance, ride coordination, connection requests, and messages need a Supabase URL, publishable key, matching project ref, and the checked-in migrations.
 
 ## Configure Supabase
 
-Create a dedicated Supabase project for LocalLoops. Do not point this app at a database used by another product. Copy the URL, publishable key, and project ref into `.env.local`. The app checks that the URL's project ref matches the configured ref before it enables accounts, which prevents accidentally connecting LocalLoops to another product's project.
+Use a dedicated Supabase project for LocalLoops when available. Its migrations create only `localloops_`-prefixed tables and RPCs, and its signup trigger skips other products' profile creation. Copy the URL, publishable key, and project ref into `.env.local`. The app checks that the URL's project ref matches the configured ref before it enables accounts, which prevents accidentally connecting LocalLoops to a different project.
 
 ```dotenv
 VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co

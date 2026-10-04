@@ -45,7 +45,7 @@ export function CreateEventModal({ client, userId, profile, location, communityI
       setError(lookupError instanceof Error ? lookupError.message : 'We could not locate that public meeting place.')
       return
     }
-    const { data, error: insertError } = await client.from('events').insert({
+    const { data, error: insertError } = await client.from('localloops_events').insert({
       host_id: userId,
       title: title.trim(),
       description: description.trim(),
