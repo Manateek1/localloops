@@ -4,11 +4,32 @@ import type { CommunityEvent, LocationResult } from '../data/models'
 export type GuideVoiceState = 'ready' | 'listening' | 'thinking' | 'speaking' | 'error'
 
 type GuideTurn = { role: 'user' | 'model'; text: string }
-type ProviderStatus = { gemini: boolean; elevenLabs: boolean }
-type VoiceInput = { audio: string; mimeType: string }
+type ProviderStatus = { grok: boolean; elevenLabs: boolean }
+type VoiceInput = { transcript: string }
+type GuideRecognitionEvent = {
+  resultIndex: number
+  results: ArrayLike<{ isFinal: boolean; 0?: { transcript: string } }>
+}
+type GuideRecognitionErrorEvent = { error: string }
+type GuideRecognition = {
+  lang: string
+  continuous: boolean
+  interimResults: boolean
+  maxAlternatives: number
+  onresult: ((event: GuideRecognitionEvent) => void) | null
+  onerror: ((event: GuideRecognitionErrorEvent) => void) | null
+  onend: (() => void) | null
+  start(): void
+  stop(): void
+  abort(): void
+}
+type GuideRecognitionConstructor = new () => GuideRecognition
+type SpeechRecognitionWindow = {
+  SpeechRecognition?: GuideRecognitionConstructor
+  webkitSpeechRecognition?: GuideRecognitionConstructor
+}
 
-const MAX_RECORDING_MS = 15_000
-const MAX_AUDIO_BYTES = 750_000
+const MAX_LISTENING_MS = 15_000
 const MAX_HISTORY_TURNS = 6
 
 export function useCommunityGuideVoice({ events, location, language }: {
@@ -18,13 +39,11 @@ export function useCommunityGuideVoice({ events, location, language }: {
 }) {
   const [voiceState, setVoiceStateValue] = useState<GuideVoiceState>('ready')
   const [statusText, setStatusText] = useState('Ready when you are.')
-  const [providers, setProviders] = useState<ProviderStatus>({ gemini: false, elevenLabs: false })
+  const [providers, setProviders] = useState<ProviderStatus>({ grok: false, elevenLabs: false })
   const voiceStateRef = useRef<GuideVoiceState>('ready')
   const activationRef = useRef(0)
-  const recorderRef = useRef<MediaRecorder | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const audioChunksRef = useRef<BlobPart[]>([])
-  const recordingTimerRef = useRef<number | undefined>(undefined)
+  const recognitionRef = useRef<GuideRecognition | null>(null)
+  const listeningTimerRef = useRef<number | undefined>(undefined)
   const audioContextRef = useRef<AudioContext | null>(null)
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -118,14 +137,12 @@ export function useCommunityGuideVoice({ events, location, language }: {
     speakWithBrowser(text, speakingStatus)
   }, [finishSpeaking, setVoiceState, speakWithBrowser])
 
-  const stopRecordingTracks = useCallback(() => {
-    if (recordingTimerRef.current !== undefined) window.clearTimeout(recordingTimerRef.current)
-    recordingTimerRef.current = undefined
-    streamRef.current?.getTracks().forEach((track) => track.stop())
-    streamRef.current = null
+  const stopListeningTimer = useCallback(() => {
+    if (listeningTimerRef.current !== undefined) window.clearTimeout(listeningTimerRef.current)
+    listeningTimerRef.current = undefined
   }, [])
 
-  const submitToGuide = useCallback(async ({ audio, mimeType }: VoiceInput) => {
+  const submitToGuide = useCallback(async ({ transcript }: VoiceInput) => {
     setVoiceState('thinking')
     setStatusText('Thinking of a good local plan…')
 
@@ -147,12 +164,11 @@ export function useCommunityGuideVoice({ events, location, language }: {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          audio,
-          mimeType,
+          transcript,
           history: conversationRef.current.slice(-MAX_HISTORY_TURNS),
           context: { location: location?.label ?? '', language, events: eventContext },
         }),
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(50_000),
       })
       const result = await response.json() as {
         heard?: string
@@ -175,88 +191,77 @@ export function useCommunityGuideVoice({ events, location, language }: {
     }
   }, [events, language, location, setVoiceState, speakReply])
 
-  const startListening = useCallback(async () => {
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+  const startListening = useCallback(() => {
+    const speechWindow = window as unknown as SpeechRecognitionWindow
+    const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition
+    if (!Recognition) {
       setVoiceState('error')
-      setStatusText('This browser cannot use a microphone. Try an up-to-date browser over HTTPS.')
+      setStatusText('Speech recognition is not supported in this browser. Try an up-to-date browser.')
       return
     }
 
     const activation = ++activationRef.current
+    const recognition = new Recognition()
+    let transcript = ''
+    let recognitionFailed = false
+    recognition.lang = speechLocale(language)
+    recognition.continuous = true
+    recognition.interimResults = false
+    recognition.maxAlternatives = 1
+    recognitionRef.current = recognition
     setVoiceState('listening')
-    setStatusText('Connecting to your microphone…')
+    setStatusText('I’m listening. Tap to finish, or speak for up to 15 seconds.')
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      if (activation !== activationRef.current) {
-        stream.getTracks().forEach((track) => track.stop())
+    recognition.onresult = (event) => {
+      const finalParts: string[] = []
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index]
+        if (result.isFinal && result[0]?.transcript) finalParts.push(result[0].transcript)
+      }
+      transcript = `${transcript} ${finalParts.join(' ')}`.trim()
+    }
+    recognition.onerror = (event) => {
+      if (activation !== activationRef.current) return
+      recognitionFailed = true
+      if (recognitionRef.current === recognition) recognitionRef.current = null
+      stopListeningTimer()
+      setVoiceState('error')
+      setStatusText(event.error === 'not-allowed' || event.error === 'service-not-allowed'
+        ? 'Microphone or speech recognition access is off. Allow it in your browser, then try again.'
+        : event.error === 'network'
+          ? 'The browser speech service could not connect. Check your connection and try again.'
+          : 'I couldn’t hear that clearly. Please try again.')
+    }
+    recognition.onend = () => {
+      if (activation !== activationRef.current) return
+      if (recognitionRef.current === recognition) recognitionRef.current = null
+      stopListeningTimer()
+      if (recognitionFailed) return
+      if (!transcript) {
+        setVoiceState('error')
+        setStatusText('I didn’t hear a question. Move a little closer to the microphone and try again.')
         return
       }
-      streamRef.current = stream
-
-      const supportedTypes = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus']
-      const mimeType = supportedTypes.find((type) => MediaRecorder.isTypeSupported(type))
-      const recorder = mimeType
-        ? new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 48_000 })
-        : new MediaRecorder(stream, { audioBitsPerSecond: 48_000 })
-      recorderRef.current = recorder
-      audioChunksRef.current = []
-      recorder.ondataavailable = (event) => {
-        if (event.data.size) audioChunksRef.current.push(event.data)
-      }
-      recorder.onstop = () => {
-        stopRecordingTracks()
-        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' })
-        audioChunksRef.current = []
-        if (!blob.size) {
-          setVoiceState('error')
-          setStatusText('I didn’t hear anything. Move a little closer to the microphone and try again.')
-          return
-        }
-        if (blob.size > MAX_AUDIO_BYTES) {
-          setVoiceState('error')
-          setStatusText('That recording was too long. Please try a shorter question.')
-          return
-        }
-
-        const reader = new FileReader()
-        reader.onerror = () => {
-          setVoiceState('error')
-          setStatusText('I couldn’t read that recording. Please try again.')
-        }
-        reader.onload = () => {
-          const dataUrl = typeof reader.result === 'string' ? reader.result : ''
-          const audio = dataUrl.split(',')[1]
-          if (!audio) {
-            setVoiceState('error')
-            setStatusText('I couldn’t read that recording. Please try again.')
-            return
-          }
-          void submitToGuide({ audio, mimeType: blob.type.split(';')[0] || 'audio/webm' })
-        }
-        reader.readAsDataURL(blob)
-      }
-      recorder.start()
-      setStatusText('I’m listening. Tap to finish, or speak for up to 15 seconds.')
-      recordingTimerRef.current = window.setTimeout(() => {
-        if (recorder.state === 'recording') recorder.stop()
-      }, MAX_RECORDING_MS)
-    } catch (error) {
-      stopRecordingTracks()
-      setVoiceState('error')
-      setStatusText(error instanceof DOMException && error.name === 'NotAllowedError'
-        ? 'Microphone access is off. Allow it in your browser, then try again.'
-        : 'The microphone could not start. Check browser permission and try again.')
+      void submitToGuide({ transcript: transcript.slice(0, 1200) })
     }
-  }, [setVoiceState, stopRecordingTracks, submitToGuide])
+
+    try {
+      recognition.start()
+      listeningTimerRef.current = window.setTimeout(() => {
+        if (recognitionRef.current === recognition) recognition.stop()
+      }, MAX_LISTENING_MS)
+    } catch {
+      recognitionRef.current = null
+      stopListeningTimer()
+      setVoiceState('error')
+      setStatusText('Speech recognition could not start. Check browser permission and try again.')
+    }
+  }, [language, setVoiceState, stopListeningTimer, submitToGuide])
 
   const interrupt = useCallback(() => {
     activationRef.current += 1
-    if (recorderRef.current?.state === 'recording') {
-      recorderRef.current.onstop = null
-      recorderRef.current.stop()
-      audioChunksRef.current = []
-    }
+    recognitionRef.current?.abort()
+    recognitionRef.current = null
     audioSourceRef.current?.stop()
     audioSourceRef.current = null
     audioRef.current?.pause()
@@ -264,15 +269,15 @@ export function useCommunityGuideVoice({ events, location, language }: {
     if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current)
     audioUrlRef.current = undefined
     if ('speechSynthesis' in window) window.speechSynthesis.cancel()
-    stopRecordingTracks()
+    stopListeningTimer()
     setVoiceState('ready')
     setStatusText('Ready when you are.')
-  }, [setVoiceState, stopRecordingTracks])
+  }, [setVoiceState, stopListeningTimer])
 
   const onMainButton = useCallback(() => {
     if (voiceStateRef.current === 'thinking') return
     if (voiceStateRef.current === 'listening') {
-      if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
+      if (recognitionRef.current) recognitionRef.current.stop()
       else interrupt()
       return
     }
@@ -290,7 +295,7 @@ export function useCommunityGuideVoice({ events, location, language }: {
     void fetch('/api/guide')
       .then((response) => response.json() as Promise<ProviderStatus>)
       .then((status) => {
-        if (active) setProviders({ gemini: Boolean(status.gemini), elevenLabs: Boolean(status.elevenLabs) })
+        if (active) setProviders({ grok: Boolean(status.grok), elevenLabs: Boolean(status.elevenLabs) })
       })
       .catch(() => undefined)
 
@@ -298,12 +303,12 @@ export function useCommunityGuideVoice({ events, location, language }: {
       active = false
       voiceStateRef.current = 'ready'
       activationRef.current += 1
-      if (recorderRef.current?.state === 'recording') {
-        recorderRef.current.onstop = null
-        recorderRef.current.stop()
+      if (recognitionRef.current) {
+        recognitionRef.current.onend = null
+        recognitionRef.current.abort()
+        recognitionRef.current = null
       }
-      streamRef.current?.getTracks().forEach((track) => track.stop())
-      if (recordingTimerRef.current !== undefined) window.clearTimeout(recordingTimerRef.current)
+      if (listeningTimerRef.current !== undefined) window.clearTimeout(listeningTimerRef.current)
       try { audioSourceRef.current?.stop() } catch { /* Already stopped. */ }
       audioRef.current?.pause()
       if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current)
@@ -312,10 +317,10 @@ export function useCommunityGuideVoice({ events, location, language }: {
     }
   }, [])
 
-  const connectionNote = providers.gemini && providers.elevenLabs
-    ? 'Gemini AI · ElevenLabs voice'
-    : providers.gemini
-      ? 'Gemini AI · browser voice backup'
+  const connectionNote = providers.grok && providers.elevenLabs
+    ? 'Grok 4.6 · ElevenLabs voice'
+    : providers.grok
+      ? 'Grok 4.6 · browser voice backup'
       : 'The voice guide is connecting'
 
   return { voiceState, statusText, connectionNote, onMainButton }

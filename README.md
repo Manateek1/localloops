@@ -55,20 +55,22 @@ In Vercel, set these as server-side environment variables. Never prefix them wit
 
 ## Voice guide
 
-The guide is voice-only: people tap **Talk to Leafy**, speak, and hear a spoken response. It does not render a text chat or transcript. The browser asks for microphone permission only after the button is tapped, records up to 15 seconds, and sends the recording to the server-side `/api/guide` handler. Use the deployed HTTPS URL or `localhost`; if the microphone is blocked, allow it in the browser's site settings.
+The guide is voice-only: people tap **Talk to Leafy**, speak, and hear a spoken response. It does not render a text chat or transcript. The browser asks for speech-recognition permission after the button is tapped, transcribes up to 15 seconds, and sends the recognized text to the server-side `/api/guide` handler. This uses the browser's Web Speech recognition API; browsers without it show a setup message. The browser's speech service may process microphone audio under its own terms. Use the deployed HTTPS URL or `localhost`.
 
-Set these server-only environment variables in `.env.local` for local development and in Vercel for deployment. Never prefix either key with `VITE_`:
+Deploy the `grok-4.6` model in [Microsoft Azure AI Foundry](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/how-to/use-foundry-models-grok), then set these server-only environment variables in `.env.local` for local development and in Vercel for deployment. Never prefix the credentials with `VITE_`:
 
 ```dotenv
-GEMINI_API_KEY=...
+AZURE_FOUNDRY_ENDPOINT=https://YOUR_RESOURCE.services.ai.azure.com
+AZURE_FOUNDRY_API_KEY=...
+AZURE_FOUNDRY_DEPLOYMENT=grok-4.6
 ELEVENLABS_API_KEY=...
 ```
 
-Create the Gemini key in Google AI Studio on the free tier, without linking billing. The guide uses `gemini-3.5-flash` to understand the recording and produce a short spoken answer. It receives the selected approximate area and up to eight public event listings; it does not receive member profiles or precise coordinates. The API request opts out of saving interaction records. Gemini's free tier has rate limits, and Google says free-tier prompts may be used to improve its products. If its free quota is unavailable or exhausted, the guide reports that and does not switch to a paid tier. See [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing) and [audio input formats](https://ai.google.dev/gemini-api/docs/audio).
+`AZURE_FOUNDRY_ENDPOINT` can be the resource endpoint shown in Foundry, the `/openai/v1` base URL, or the full `/openai/v1/chat/completions` endpoint. Set `AZURE_FOUNDRY_DEPLOYMENT` to the deployment name shown in Foundry; it defaults to `grok-4.6`. The server calls Azure Foundry's OpenAI-compatible Chat Completions API using the `api-key` header and sets `reasoning_effort` to `high`. The Vercel guide function allows up to 55 seconds for a response. Grok 4.6 is currently a preview model. Azure receives the recognized question, selected approximate area, language, up to eight public event listings, and short-term conversation history; it does not receive member profiles or precise coordinates.
 
-Create an ElevenLabs personal API key with text-to-speech permission only and set it as `ELEVENLABS_API_KEY`. The server sends only Gemini's short reply to ElevenLabs and plays the returned audio. Speech uses the credits already included in the account plan; if ElevenLabs is unavailable or out of credits, the browser's built-in voice reads the same answer. Keep automatic top-up disabled if you do not want the ElevenLabs account to buy more credits. See [ElevenLabs API keys](https://elevenlabs.io/docs/overview/administration/workspaces/api-keys) and [text-to-speech API](https://elevenlabs.io/docs/api-reference/text-to-speech/stream).
+Create an ElevenLabs personal API key with text-to-speech permission only and set it as `ELEVENLABS_API_KEY`. The server sends only Grok's short reply to ElevenLabs and plays the returned audio. If ElevenLabs is unavailable, the browser's built-in voice reads the same answer. Keep automatic top-up disabled if you do not want the ElevenLabs account to buy more credits. See [ElevenLabs API keys](https://elevenlabs.io/docs/overview/administration/workspaces/api-keys) and [text-to-speech API](https://elevenlabs.io/docs/api-reference/text-to-speech/stream).
 
-The selected site language is sent to Gemini for its spoken answer. The recognized words are kept in short-term browser memory to support follow-up questions; LocalLoops does not display or save a transcript. Gemini and ElevenLabs process the audio or generated reply to provide the service.
+The selected site language is used for browser speech recognition and sent to Grok for its spoken answer. Recognized words stay in short-term browser memory to support follow-up questions; LocalLoops does not display or save a transcript. The browser's speech service processes microphone audio, Azure Foundry processes the question and supplied context, and ElevenLabs processes the generated reply when configured.
 
 ## Translate the site
 
@@ -82,4 +84,4 @@ Import this repository into Vercel with the Vite framework preset. Add the Supab
 
 ## Scope
 
-LocalLoops has email/password sign-in, profiles, opt-in member discovery, connection requests, accepted-connection messages, public community events, shared “I'm going” attendance, and public-place ride coordination. The large sprout character is Leafy, the voice guide. The guide uses Gemini for spoken questions and answers, and ElevenLabs for speech synthesis; browser speech synthesis provides a fallback.
+LocalLoops has email/password sign-in, profiles, opt-in member discovery, connection requests, accepted-connection messages, public community events, shared “I'm going” attendance, and public-place ride coordination. The large sprout character is Leafy, the voice guide. The guide uses Azure AI Foundry with Grok 4.6 for spoken questions and answers, and ElevenLabs for speech synthesis; browser speech recognition and speech synthesis provide browser-side voice support.

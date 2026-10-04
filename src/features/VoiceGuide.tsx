@@ -48,7 +48,7 @@ export function VoiceGuide({ events, location }: VoiceGuideProps) {
         </div>
         <p className="greet-guide-status" role="status" aria-live="polite">{statusText}</p>
         <p className="greet-guide-language-note"><Sparkles size={13} aria-hidden="true" />{connectionNote}</p>
-        <p className="greet-guide-privacy">Voice is processed for your answer. LocalLoops doesn’t save a transcript.</p>
+        <p className="greet-guide-privacy">Your browser’s speech service may process microphone audio. Azure receives your transcript and selected area/event context; LocalLoops doesn’t save transcripts.</p>
       </div>
       <img src="/images/localloops-sprout.png" alt="Sprout, your friendly LocalLoops guide" />
       <span className="greet-guide-card__sparkle" aria-hidden="true"><Sparkles size={22} /></span>
