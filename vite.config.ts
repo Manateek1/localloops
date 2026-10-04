@@ -37,7 +37,7 @@ function localApi(): Plugin {
         request.on('data', (chunk: Buffer | string) => {
           const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
           bytes += buffer.length
-          if (bytes > (pathname === '/api/guide' ? 1_100_000 : 32 * 1024)) {
+          if (bytes > 32 * 1024) {
             tooLarge = true
             return
           }
@@ -68,7 +68,7 @@ export default defineConfig(({ mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), '')
     if (!process.env.TICKETMASTER_API_KEY && localEnv.TICKETMASTER_API_KEY) process.env.TICKETMASTER_API_KEY = localEnv.TICKETMASTER_API_KEY
     if (!process.env.NPS_API_KEY && localEnv.NPS_API_KEY) process.env.NPS_API_KEY = localEnv.NPS_API_KEY
-    for (const key of ['GEMINI_API_KEY', 'ELEVENLABS_API_KEY', 'GOOGLE_TRANSLATE_API_KEY', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY']) {
+    for (const key of ['AZURE_FOUNDRY_ENDPOINT', 'AZURE_FOUNDRY_API_KEY', 'AZURE_FOUNDRY_DEPLOYMENT', 'ELEVENLABS_API_KEY', 'GOOGLE_TRANSLATE_API_KEY', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY']) {
       if (!process.env[key] && localEnv[key]) process.env[key] = localEnv[key]
     }
   return {

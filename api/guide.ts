@@ -16,7 +16,7 @@ declare const process: { env: Record<string, string | undefined> }
 
 const WINDOW_MS = 60 * 60 * 1000
 const REQUESTS_PER_WINDOW = 20
-const MAX_BODY_BYTES = 1_100_000
+const MAX_BODY_BYTES = 32 * 1024
 const requestWindows = new Map<string, { startedAt: number; count: number }>()
 
 function respond(response: VercelResponse, status: number, body: unknown) {
@@ -51,7 +51,9 @@ function isRateLimited(request: VercelRequest) {
 export default async function handler(request: VercelRequest, response: VercelResponse) {
   response.setHeader('X-Content-Type-Options', 'nosniff')
   const secrets = {
-    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    AZURE_FOUNDRY_ENDPOINT: process.env.AZURE_FOUNDRY_ENDPOINT,
+    AZURE_FOUNDRY_API_KEY: process.env.AZURE_FOUNDRY_API_KEY,
+    AZURE_FOUNDRY_DEPLOYMENT: process.env.AZURE_FOUNDRY_DEPLOYMENT,
     ELEVENLABS_API_KEY: process.env.ELEVENLABS_API_KEY,
   }
 
