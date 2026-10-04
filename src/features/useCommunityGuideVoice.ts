@@ -4,21 +4,23 @@ import type { CommunityEvent, LocationResult } from '../data/models'
 export type GuideVoiceState = 'ready' | 'listening' | 'thinking' | 'speaking' | 'error'
 
 type GuideTurn = { role: 'user' | 'model'; text: string }
-type ProviderStatus = { gemini: boolean; elevenLabs: boolean }
 type VoiceInput = { audio: string; mimeType: string }
+type GuideInput = VoiceInput | { message: string }
+type GuideAnswer = { heard?: string; reply: string; audioBase64?: string; voiceProvider?: 'elevenlabs' | 'browser' }
 
 const MAX_RECORDING_MS = 15_000
 const MAX_AUDIO_BYTES = 750_000
 const MAX_HISTORY_TURNS = 6
 
-export function useCommunityGuideVoice({ events, location, language }: {
+export function useCommunityGuideVoice({ events, location, language, interests = [], onTurn }: {
   events: CommunityEvent[]
   location: LocationResult | null
   language: string
+  interests?: string[]
+  onTurn?: (turn: { role: 'user' | 'model'; text: string }) => void
 }) {
   const [voiceState, setVoiceStateValue] = useState<GuideVoiceState>('ready')
   const [statusText, setStatusText] = useState('Ready when you are.')
-  const [providers, setProviders] = useState<ProviderStatus>({ gemini: false, elevenLabs: false })
   const voiceStateRef = useRef<GuideVoiceState>('ready')
   const activationRef = useRef(0)
   const recorderRef = useRef<MediaRecorder | null>(null)
@@ -30,6 +32,8 @@ export function useCommunityGuideVoice({ events, location, language }: {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const audioUrlRef = useRef<string | undefined>(undefined)
   const conversationRef = useRef<GuideTurn[]>([])
+  const onTurnRef = useRef(onTurn)
+  onTurnRef.current = onTurn
 
   const setVoiceState = useCallback((nextState: GuideVoiceState) => {
     voiceStateRef.current = nextState
@@ -125,9 +129,9 @@ export function useCommunityGuideVoice({ events, location, language }: {
     streamRef.current = null
   }, [])
 
-  const submitToGuide = useCallback(async ({ audio, mimeType }: VoiceInput) => {
+  const requestGuide = useCallback(async (input: GuideInput): Promise<GuideAnswer> => {
     setVoiceState('thinking')
-    setStatusText('Thinking of a good local plan…')
+    setStatusText('Leafy is thinking…')
 
     const eventContext = events.slice(0, 8).map((event) => ({
       title: event.title,
@@ -147,33 +151,46 @@ export function useCommunityGuideVoice({ events, location, language }: {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          audio,
-          mimeType,
+          ...('audio' in input ? input : { message: input.message }),
           history: conversationRef.current.slice(-MAX_HISTORY_TURNS),
-          context: { location: location?.label ?? '', language, events: eventContext },
+          context: { location: location?.label ?? '', language, interests, events: eventContext },
         }),
         signal: AbortSignal.timeout(30_000),
       })
-      const result = await response.json() as {
-        heard?: string
-        reply?: string
-        audioBase64?: string
-        voiceProvider?: 'elevenlabs' | 'browser'
-        error?: string
-      }
+      const result = await response.json() as GuideAnswer & { error?: string }
       if (!response.ok || !result.reply) throw new Error(result.error || 'The guide could not answer just now. Please try again.')
 
-      if (result.heard) conversationRef.current.push({ role: 'user', text: result.heard })
+      const userText = result.heard || ('message' in input ? input.message : '')
+      if (userText) {
+        conversationRef.current.push({ role: 'user', text: userText })
+        if ('audio' in input) onTurnRef.current?.({ role: 'user', text: userText })
+      }
       conversationRef.current.push({ role: 'model', text: result.reply })
       conversationRef.current = conversationRef.current.slice(-MAX_HISTORY_TURNS)
-
-      const voiceName = result.voiceProvider === 'elevenlabs' ? 'ElevenLabs' : 'your browser’s voice'
-      await speakReply(result.reply, result.audioBase64, `Sprout is answering with ${voiceName}. Tap the button to interrupt.`)
+      if ('audio' in input) onTurnRef.current?.({ role: 'model', text: result.reply })
+      return result
     } catch (error) {
       setVoiceState('error')
       setStatusText(error instanceof Error ? error.message : 'The guide could not answer just now. Please try again.')
+      throw error
     }
-  }, [events, language, location, setVoiceState, speakReply])
+  }, [events, interests, language, location, setVoiceState])
+
+  const submitToGuide = useCallback(async (input: VoiceInput) => {
+    try {
+      const answer = await requestGuide(input)
+      await speakReply(answer.reply, answer.audioBase64, 'Leafy is speaking. Tap the microphone to interrupt.')
+    } catch {
+      // The hook keeps the provider or microphone error in its visible status.
+    }
+  }, [requestGuide, speakReply])
+
+  const sendText = useCallback(async (message: string) => {
+    const answer = await requestGuide({ message: message.trim().slice(0, 1000) })
+    setVoiceState('ready')
+    setStatusText('Ready when you are.')
+    return answer.reply
+  }, [requestGuide, setVoiceState])
 
   const startListening = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
@@ -286,16 +303,7 @@ export function useCommunityGuideVoice({ events, location, language }: {
   }, [interrupt, primeAudioPlayback, startListening])
 
   useEffect(() => {
-    let active = true
-    void fetch('/api/guide')
-      .then((response) => response.json() as Promise<ProviderStatus>)
-      .then((status) => {
-        if (active) setProviders({ gemini: Boolean(status.gemini), elevenLabs: Boolean(status.elevenLabs) })
-      })
-      .catch(() => undefined)
-
     return () => {
-      active = false
       voiceStateRef.current = 'ready'
       activationRef.current += 1
       if (recorderRef.current?.state === 'recording') {
@@ -312,13 +320,7 @@ export function useCommunityGuideVoice({ events, location, language }: {
     }
   }, [])
 
-  const connectionNote = providers.gemini && providers.elevenLabs
-    ? 'Gemini AI · ElevenLabs voice'
-    : providers.gemini
-      ? 'Gemini AI · browser voice backup'
-      : 'The voice guide is connecting'
-
-  return { voiceState, statusText, connectionNote, onMainButton }
+  return { voiceState, statusText, onMainButton, sendText }
 }
 
 function speechLocale(language: string) {

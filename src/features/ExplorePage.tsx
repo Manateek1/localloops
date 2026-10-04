@@ -1,5 +1,5 @@
 import { Suspense, lazy, useMemo, useState, type FormEvent } from 'react'
-import { AudioLines, CalendarDays, Compass, List, Map, MapPin, Plus, Search, Trees } from 'lucide-react'
+import { CalendarDays, Compass, Leaf, List, Map, MapPin, Plus, Search, Trees } from 'lucide-react'
 import type { CommunityEvent, LocationResult } from '../data/models'
 import type { EventFeedState } from '../lib/events'
 import { sortNearby } from '../lib/events'
@@ -22,8 +22,8 @@ type ExplorePageProps = {
   onSearch: (query: string) => Promise<void>
   onRadiusChange: (radius: number) => void
   onOpenEvent: (event: CommunityEvent) => void
-  onOpenAgent: () => void
   onCreateEvent: () => void
+  onAskLeafy: () => void
   canCreateEvent: boolean
   onSignIn: () => void
 }
@@ -33,7 +33,8 @@ const filters = ['All events', 'Outdoors', 'Arts & culture', 'Music', 'Free', 'C
 export function ExplorePage({
   location, events, loading, sources, errors, locationError, communityAvailable, query, radius, interests, onQueryChange, onSearch,
   onRadiusChange,
-  onOpenEvent, onOpenAgent, onCreateEvent, canCreateEvent, onSignIn,
+  onOpenEvent, onCreateEvent, canCreateEvent, onSignIn,
+  onAskLeafy,
 }: ExplorePageProps) {
   const [view, setView] = useState<'map' | 'list'>('map')
   const [filter, setFilter] = useState('All events')
@@ -71,7 +72,7 @@ export function ExplorePage({
           <p className="greet-home-hero__intro">Search a U.S. street address, town, or ZIP to find public events and local gatherings nearby.</p>
           <div className="greet-home-hero__actions">
             <button className="greet-button greet-button--primary" type="button" onClick={canCreateEvent ? onCreateEvent : onSignIn}><Plus size={17} />Host a gathering</button>
-            <button className="greet-button greet-button--outline" type="button" onClick={onOpenAgent}><AudioLines size={17} />Talk to Sprout</button>
+            <button className="greet-button greet-button--soft" type="button" onClick={onAskLeafy}><Leaf size={16} />Ask Leafy</button>
           </div>
         </div>
       </section>

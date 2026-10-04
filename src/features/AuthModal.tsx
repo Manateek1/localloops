@@ -5,11 +5,13 @@ import type { Database } from '../lib/supabase/database.types'
 
 type AuthModalProps = {
   client: SupabaseClient<Database> | null
+  initialMode?: 'sign-in' | 'create'
+  selectedInterests?: string[]
   onClose: () => void
 }
 
-export function AuthModal({ client, onClose }: AuthModalProps) {
-  const [mode, setMode] = useState<'sign-in' | 'create'>('sign-in')
+export function AuthModal({ client, initialMode = 'sign-in', selectedInterests = [], onClose }: AuthModalProps) {
+  const [mode, setMode] = useState<'sign-in' | 'create'>(initialMode)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
@@ -31,12 +33,16 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
           email: email.trim(),
           password,
           options: {
-            data: { localloops_app: true },
+            data: {
+              localloops_app: true,
+              localloops_interests: selectedInterests,
+              localloops_onboarding_complete: false,
+            },
           },
         })
         if (signupError) throw signupError
         if (data.session) onClose()
-        else setError('This Supabase project requires email confirmation. Turn off email confirmations in its Auth settings to let new accounts sign in right away.')
+        else setMessage('Check your email to confirm your LocalLoops account. Your selected interests will be waiting when you return.')
       } else {
         const { error: signinError } = await client.auth.signInWithPassword({ email: email.trim(), password })
         if (signinError) throw signinError

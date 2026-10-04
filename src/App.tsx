@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { BottomNav, Header, type Page } from './components/Navigation'
 import { AccountPage } from './features/AccountPage'
-import { AgentPage } from './features/AgentPage'
 import { AuthModal } from './features/AuthModal'
 import { CommunityPage } from './features/CommunityPage'
 import { CreateEventModal } from './features/CreateEventModal'
 import { EventDetail, type RidePlan } from './features/EventDetail'
 import { ExplorePage } from './features/ExplorePage'
+import { HomePage } from './features/HomePage'
 import { InboxPage } from './features/InboxPage'
+import { LeafyPage } from './features/LeafyPage'
 import { MessagesPage } from './features/MessagesPage'
 import { getCommunityEvents, getSourcedEvents, getUserEventHistoryCategories, sortNearby, type EventFeedState } from './lib/events'
 import { searchLocation } from './lib/location'
@@ -25,14 +26,21 @@ const noSources: EventFeedState = {
   community: 'not_configured',
 }
 
+function pageForUser(nextUser: User | null): Page {
+  if (!nextUser) return 'home'
+  return nextUser.user_metadata?.localloops_onboarding_complete === false ? 'onboarding' : 'explore'
+}
+
 function App() {
-  const [page, setPage] = useState<Page>('explore')
+  const [page, setPage] = useState<Page>('home')
   const [user, setUser] = useState<User | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [eventHistoryCategories, setEventHistoryCategories] = useState<string[]>([])
   const [profileRefresh, setProfileRefresh] = useState(0)
   const [authOpen, setAuthOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<'sign-in' | 'create'>('sign-in')
+  const [signupInterests, setSignupInterests] = useState<string[]>([])
   const [eventComposerOpen, setEventComposerOpen] = useState(false)
   const [eventCommunityId, setEventCommunityId] = useState<string | null>(null)
   const [location, setLocation] = useState<LocationResult | null>(null)
@@ -50,6 +58,7 @@ function App() {
   const [messages, setMessages] = useState<MessageRow[]>([])
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<CommunityEvent | null>(null)
+  const [eventReturnPage, setEventReturnPage] = useState<Page>('explore')
   const [going, setGoing] = useState(false)
   const [attendees, setAttendees] = useState<EventAttendee[]>([])
   const [ridePost, setRidePost] = useState<RidePlan | null>(null)
@@ -66,7 +75,9 @@ function App() {
     let active = true
     void supabaseClient.auth.getSession().then(({ data }) => {
       if (active) {
-        setUser(data.session?.user ?? null)
+        const nextUser = data.session?.user ?? null
+        setUser(nextUser)
+        setPage(pageForUser(nextUser))
         setAuthLoading(false)
       }
     }).catch(() => {
@@ -78,6 +89,7 @@ function App() {
     })
     const { data } = supabaseClient.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
+      setPage(pageForUser(session?.user ?? null))
       setAuthLoading(false)
       if (!session) {
         setProfile(null)
@@ -225,27 +237,47 @@ function App() {
 
   const notify = (message: string) => setToast(message)
 
-  const openSignIn = () => setAuthOpen(true)
+  const openSignIn = () => {
+    setAuthMode('sign-in')
+    setSignupInterests([])
+    setAuthOpen(true)
+  }
+  const openCreateAccount = (interests: string[]) => {
+    setAuthMode('create')
+    setSignupInterests(interests)
+    setAuthOpen(true)
+  }
   const navigate = (nextPage: Page) => {
     setPage(nextPage)
     if (nextPage === 'messages' && !selectedThreadId) setPage('inbox')
   }
 
-  const submitLocation = async (query: string) => {
+  const submitLocation = async (query: string): Promise<LocationResult | null> => {
     setLocationQuery(query)
     setLocationError('')
     try {
       const nextLocation = await searchLocation(query)
       setLocation(nextLocation)
       notify('Showing real events near ' + nextLocation.label + '.')
+      return nextLocation
     } catch (error) {
       const message = error instanceof Error ? error.message : 'We could not find that place.'
       setLocationError(message)
       notify(message)
+      return null
     }
   }
 
+  const profileLocationAttempted = useRef('')
+  useEffect(() => {
+    if (!user || !profile?.home_region || !profile.state_code || location) return
+    if (profileLocationAttempted.current === user.id) return
+    profileLocationAttempted.current = user.id
+    void submitLocation(`${profile.home_region}, ${profile.state_code}`)
+  }, [user?.id, profile?.home_region, profile?.state_code, location])
+
   const openEvent = (event: CommunityEvent) => {
+    if (page !== 'event') setEventReturnPage(page)
     setSelectedEvent(event)
     setPage('event')
   }
@@ -438,6 +470,7 @@ function App() {
     setEvents((current) => sortNearby([...current, event]))
     setEventComposerOpen(false)
     setSelectedEvent(event)
+    setEventReturnPage(page)
     setPage('event')
     notify('Your public gathering is live.')
   }
@@ -447,7 +480,7 @@ function App() {
     const { error } = await supabaseClient.auth.signOut()
     if (error) notify(error.message)
     else {
-      setPage('explore')
+      setPage('home')
       notify('You have signed out.')
     }
   }
@@ -457,15 +490,32 @@ function App() {
   }
 
   const userName = profile?.display_name ?? (user?.email ? user.email.split('@')[0] : null)
+  const onboardingInterests = Array.isArray(user?.user_metadata?.localloops_interests)
+    ? user.user_metadata.localloops_interests.filter((item: unknown): item is string => typeof item === 'string')
+    : []
   const isMessagePage = page === 'messages'
+  const hideGlobalChrome = page === 'home' || page === 'onboarding'
   const threadMessageList = threadMessages
   const eventModalClient = supabaseClient
 
   return (
     <div className="greet-app-shell">
-      {!isMessagePage && <Header page={page} userName={userName} onNavigate={navigate} onSignIn={openSignIn} onSignOut={() => void signOut()} />}
+      {!isMessagePage && !hideGlobalChrome && <Header page={page} userName={userName} onNavigate={navigate} onSignIn={openSignIn} onSignOut={() => void signOut()} />}
       <TranslationNotice />
       <main className={'greet-app-main greet-app-main--' + page}>
+        {page === 'home' && <HomePage onSignIn={openSignIn} onCreateAccount={openCreateAccount} />}
+        {page === 'onboarding' && user && <AccountPage
+          client={supabaseClient}
+          userId={user.id}
+          profile={profile}
+          variant="onboarding"
+          initialInterests={onboardingInterests}
+          onSave={(nextProfile) => { setProfile(nextProfile); setProfileRefresh((value) => value + 1) }}
+          onComplete={(nextProfile) => {
+            setPage('explore')
+            if (nextProfile.home_region && nextProfile.state_code) void submitLocation(`${nextProfile.home_region}, ${nextProfile.state_code}`)
+          }}
+        />}
         {page === 'explore' && <ExplorePage
           location={location}
           events={events}
@@ -478,11 +528,11 @@ function App() {
           radius={radius}
           interests={recommendationInterests}
           onQueryChange={(value) => { setLocationQuery(value); setLocationError('') }}
-          onSearch={submitLocation}
+          onSearch={async (query) => { await submitLocation(query) }}
           onRadiusChange={setRadius}
           onOpenEvent={openEvent}
-          onOpenAgent={() => setPage('agent')}
           onCreateEvent={openEventComposer}
+          onAskLeafy={() => navigate('leafy')}
           canCreateEvent={Boolean(user)}
           onSignIn={openSignIn}
         />}
@@ -496,7 +546,7 @@ function App() {
           userId={user?.id ?? null}
           signedIn={Boolean(user)}
           busy={eventBusy}
-          onBack={() => setPage('explore')}
+          onBack={() => setPage(eventReturnPage)}
           onRsvp={toggleRsvp}
           onRide={saveRidePlan}
           onSayHello={(memberId) => void connectFromRidePlan(memberId)}
@@ -519,16 +569,6 @@ function App() {
           onOpenEvent={openEvent}
           onSignIn={openSignIn}
         />}
-        {page === 'agent' && (
-          <AgentPage
-            events={events}
-            errors={feedErrors}
-            loading={feedLoading}
-            location={location}
-            onOpenEvent={openEvent}
-            onOpenExplore={() => setPage('explore')}
-          />
-        )}
         {page === 'inbox' && <InboxPage
           userId={user?.id ?? null}
           friendships={friendships}
@@ -539,6 +579,16 @@ function App() {
           onAccept={(friendshipId) => void acceptConnectionRequest(friendshipId)}
           onDismiss={(friendshipId) => void dismissConnectionRequest(friendshipId)}
           onSignIn={openSignIn}
+        />}
+        {page === 'leafy' && <LeafyPage
+          events={events}
+          location={location}
+          locationQuery={locationQuery}
+          interests={recommendationInterests}
+          loading={feedLoading}
+          locationError={locationError}
+          onSearchLocation={submitLocation}
+          onOpenEvent={openEvent}
         />}
         {page === 'messages' && selectedThread && user && <MessagesPage
           name={threadProfileName}
@@ -555,9 +605,9 @@ function App() {
           onSave={(nextProfile) => { setProfile(nextProfile); setProfileRefresh((value) => value + 1) }}
         />}
       </main>
-      {!isMessagePage && <BottomNav page={page} userName={userName} onNavigate={navigate} onSignIn={openSignIn} />}
+      {!isMessagePage && !hideGlobalChrome && <BottomNav page={page} userName={userName} onNavigate={navigate} />}
       {toast && <div className="greet-toast" role="status">{toast}</div>}
-      {authOpen && <AuthModal client={supabaseClient} onClose={() => setAuthOpen(false)} />}
+      {authOpen && <AuthModal client={supabaseClient} initialMode={authMode} selectedInterests={signupInterests} onClose={() => setAuthOpen(false)} />}
       {eventComposerOpen && eventModalClient && user && <CreateEventModal client={eventModalClient} userId={user.id} profile={profile} location={location} communityId={eventCommunityId} onClose={() => setEventComposerOpen(false)} onCreated={onEventCreated} />}
     </div>
   )

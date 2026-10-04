@@ -1,8 +1,8 @@
-import { AudioLines, Compass, MessageCircle, UserRound, Users } from 'lucide-react'
+import { Compass, Leaf, MessageCircle, UserRound, Users } from 'lucide-react'
 import { Brand } from './Brand'
 import { LanguagePicker } from '../features/LanguageProvider'
 
-export type Page = 'explore' | 'community' | 'agent' | 'inbox' | 'account' | 'event' | 'messages'
+export type Page = 'home' | 'onboarding' | 'explore' | 'community' | 'inbox' | 'leafy' | 'account' | 'event' | 'messages'
 
 type NavigationProps = {
   page: Page
@@ -15,8 +15,8 @@ type NavigationProps = {
 const items = [
   { page: 'explore' as const, label: 'Explore', Icon: Compass },
   { page: 'community' as const, label: 'Community', Icon: Users },
-  { page: 'agent' as const, label: 'Sprout AI', Icon: AudioLines },
   { page: 'inbox' as const, label: 'Inbox', Icon: MessageCircle },
+  { page: 'leafy' as const, label: 'Leafy', Icon: Leaf },
 ]
 
 function activeFor(page: Page): Page {
@@ -50,7 +50,7 @@ export function Header({ page, userName, onNavigate, onSignIn, onSignOut }: Navi
   )
 }
 
-export function BottomNav({ page, userName, onNavigate, onSignIn }: Pick<NavigationProps, 'page' | 'userName' | 'onNavigate' | 'onSignIn'>) {
+export function BottomNav({ page, userName, onNavigate }: Pick<NavigationProps, 'page' | 'userName' | 'onNavigate'>) {
   const activePage = activeFor(page)
   return (
     <nav className="greet-bottom-nav" aria-label="Main navigation">
@@ -59,9 +59,7 @@ export function BottomNav({ page, userName, onNavigate, onSignIn }: Pick<Navigat
           <Icon size={20} strokeWidth={1.9} /><span>{label}</span>
         </button>
       ))}
-      {userName
-        ? <button className={`greet-bottom-nav__item ${activePage === 'account' ? 'is-active' : ''}`} type="button" onClick={() => onNavigate('account')}><UserRound size={20} /><span>Profile</span></button>
-        : <button className="greet-bottom-nav__item" type="button" onClick={onSignIn}><UserRound size={20} /><span>Sign in</span></button>}
+      {userName && <button className={`greet-bottom-nav__item ${activePage === 'account' ? 'is-active' : ''}`} type="button" onClick={() => onNavigate('account')}><UserRound size={20} /><span>Profile</span></button>}
     </nav>
   )
 }
