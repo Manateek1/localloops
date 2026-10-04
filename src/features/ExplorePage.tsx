@@ -1,10 +1,9 @@
 import { Suspense, lazy, useMemo, useState, type FormEvent } from 'react'
-import { CalendarDays, Compass, List, Map, MapPin, Plus, Search, Trees } from 'lucide-react'
+import { AudioLines, CalendarDays, Compass, List, Map, MapPin, Plus, Search, Trees } from 'lucide-react'
 import type { CommunityEvent, LocationResult } from '../data/models'
 import type { EventFeedState } from '../lib/events'
 import { sortNearby } from '../lib/events'
 import { EventCard } from '../components/EventCard'
-import { VoiceGuide } from './VoiceGuide'
 
 const MapCanvas = lazy(() => import('../components/MapCanvas').then((module) => ({ default: module.MapCanvas })))
 
@@ -23,6 +22,7 @@ type ExplorePageProps = {
   onSearch: (query: string) => Promise<void>
   onRadiusChange: (radius: number) => void
   onOpenEvent: (event: CommunityEvent) => void
+  onOpenAgent: () => void
   onCreateEvent: () => void
   canCreateEvent: boolean
   onSignIn: () => void
@@ -33,7 +33,7 @@ const filters = ['All events', 'Outdoors', 'Arts & culture', 'Music', 'Free', 'C
 export function ExplorePage({
   location, events, loading, sources, errors, locationError, communityAvailable, query, radius, interests, onQueryChange, onSearch,
   onRadiusChange,
-  onOpenEvent, onCreateEvent, canCreateEvent, onSignIn,
+  onOpenEvent, onOpenAgent, onCreateEvent, canCreateEvent, onSignIn,
 }: ExplorePageProps) {
   const [view, setView] = useState<'map' | 'list'>('map')
   const [filter, setFilter] = useState('All events')
@@ -64,14 +64,16 @@ export function ExplorePage({
 
   return (
     <div className="greet-page greet-explore-page">
-      <section className="greet-home-hero" aria-label="Find local plans with LocalLoops">
+      <section className="greet-home-hero greet-home-hero--single" aria-label="Find local plans with LocalLoops">
         <div className="greet-home-hero__copy">
           <p className="greet-eyebrow">{location ? 'Good things are happening nearby' : 'A wider circle, close to home'}</p>
           <h1>{location ? 'Real plans around ' + location.label + '.' : 'Find a good plan, wherever home is.'}</h1>
           <p className="greet-home-hero__intro">Search a U.S. street address, town, or ZIP to find public events and local gatherings nearby.</p>
-          <button className="greet-button greet-button--primary" type="button" onClick={canCreateEvent ? onCreateEvent : onSignIn}><Plus size={17} />Host a gathering</button>
+          <div className="greet-home-hero__actions">
+            <button className="greet-button greet-button--primary" type="button" onClick={canCreateEvent ? onCreateEvent : onSignIn}><Plus size={17} />Host a gathering</button>
+            <button className="greet-button greet-button--outline" type="button" onClick={onOpenAgent}><AudioLines size={17} />Talk to Sprout</button>
+          </div>
         </div>
-        <VoiceGuide events={events} location={location} />
       </section>
 
       <section className="greet-search-panel" aria-label="Find events near a location">

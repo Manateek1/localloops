@@ -481,6 +481,7 @@ function App() {
           onSearch={submitLocation}
           onRadiusChange={setRadius}
           onOpenEvent={openEvent}
+          onOpenAgent={() => setPage('agent')}
           onCreateEvent={openEventComposer}
           canCreateEvent={Boolean(user)}
           onSignIn={openSignIn}
@@ -520,28 +521,12 @@ function App() {
         />}
         {page === 'agent' && (
           <AgentPage
-            profile={profile}
             events={events}
-            neighbors={discoverableProfiles}
+            errors={feedErrors}
+            loading={feedLoading}
+            location={location}
             onOpenEvent={openEvent}
-            onConnectNeighbor={(neighborId) => {
-              if (!user) {
-                openSignIn()
-              } else {
-                void sendConnectionRequest(neighborId)
-                setToast('Connection request sent to neighbor!')
-              }
-            }}
-            onUpdateInterests={(interests) => {
-              if (profile && supabaseClient && user) {
-                void supabaseClient
-                  .from('profiles')
-                  .update({ interests } as any)
-                  .eq('id', user.id)
-                  .then(() => setProfileRefresh((v) => v + 1))
-              }
-            }}
-            onSignIn={openSignIn}
+            onOpenExplore={() => setPage('explore')}
           />
         )}
         {page === 'inbox' && <InboxPage
