@@ -192,6 +192,7 @@ function App() {
         ? await client.from('localloops_profiles').select('*').in('id', linkedProfileIds)
         : { data: [], error: null }
       if (linkedProfileResult.error) throw linkedProfileResult.error
+      if (!active) return
       const profilesById = new Map<string, ProfileRow>()
       ;[...realProfiles, ...((linkedProfileResult.data ?? []) as ProfileRow[])].forEach((item) => profilesById.set(item.id, item))
       setDiscoverableProfiles([...profilesById.values()])
