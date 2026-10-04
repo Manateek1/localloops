@@ -33,26 +33,41 @@ export function AccountPage({ client, userId, profile, onSave }: AccountPageProp
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!client) return
-    setBusy(true)
     setMessage('')
     setError('')
-    const result = await client.from('localloops_profiles').upsert({
-      id: userId,
-      display_name: name.trim(),
-      home_region: region.trim() || null,
-      state_code: stateCode || null,
-      bio: bio.trim() || null,
-      interests,
-      discoverable,
-    }).select('*').single()
-    setBusy(false)
-    if (result.error || !result.data) {
-      setError(result.error?.message ?? 'We could not save your profile.')
+    const displayName = name.trim()
+    if (!displayName) {
+      setError('Enter a display name before saving your profile.')
       return
     }
-    onSave(result.data as Profile)
-    setMessage('Your profile is up to date.')
+    if (!client) {
+      setError('Your profile could not be saved right now. Please try again.')
+      return
+    }
+
+    setBusy(true)
+    try {
+      const result = await client.from('localloops_profiles').update({
+        display_name: displayName,
+        home_region: region.trim() || null,
+        state_code: stateCode || null,
+        bio: bio.trim() || null,
+        interests,
+        discoverable,
+      }).eq('id', userId).select('*').maybeSingle()
+
+      if (result.error || !result.data) {
+        setError(result.error?.message ?? 'We could not find your profile. Refresh the page and try again.')
+        return
+      }
+
+      onSave(result.data as Profile)
+      setMessage('Your profile is up to date.')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'We could not save your profile.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
