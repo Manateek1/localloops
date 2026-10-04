@@ -259,18 +259,27 @@ async function getTicketFairyEvents(
     to: end.toISOString().slice(0, 10),
     size: '200',
   })
-  const response = await fetch(`https://www.ticketfairy.com/api/v1/events/listing?${params}`, {
-    headers: { Accept: 'application/json' },
-    signal: AbortSignal.timeout(8000),
-  })
-  if (!response.ok) throw new Error(`Ticket Fairy returned ${response.status}`)
-  const payload = await response.json() as {
-    success?: boolean
-    data?: { events?: TicketFairyEvent[] }
+  const sourceEvents: TicketFairyEvent[] = []
+  let cursor: string | null = null
+  for (let page = 0; page < 3; page += 1) {
+    const pageParams = new URLSearchParams(params)
+    if (cursor) pageParams.set('cursor', cursor)
+    const response = await fetch(`https://www.ticketfairy.com/api/v1/events/listing?${pageParams}`, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!response.ok) throw new Error(`Ticket Fairy returned ${response.status}`)
+    const payload = await response.json() as {
+      success?: boolean
+      data?: { events?: TicketFairyEvent[]; pagination?: { nextCursor?: string | null } }
+    }
+    if (payload.success !== true) throw new Error('Ticket Fairy returned an unsuccessful response')
+    sourceEvents.push(...(payload.data?.events ?? []))
+    cursor = payload.data?.pagination?.nextCursor ?? null
+    if (!cursor) break
   }
-  if (payload.success !== true) throw new Error('Ticket Fairy returned an unsuccessful response')
 
-  return (payload.data?.events ?? []).flatMap((event): PublicEvent[] => {
+  return sourceEvents.flatMap((event): PublicEvent[] => {
     const venue = event.venue
     // Do not place events with intentionally hidden venue details on a precise map pin.
     if (!venue || venue.hidden === true || asText(venue.country).toLowerCase() !== 'us') return []

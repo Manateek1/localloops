@@ -35,7 +35,7 @@ export function CreateEventModal({ client, userId, profile, location, communityI
     }
     setBusy(true)
     setError('')
-    const { data, error: insertError } = await client.from('events').insert({
+    const { data, error: insertError } = await client.from('localloops_events').insert({
       host_id: userId,
       title: title.trim(),
       description: description.trim(),

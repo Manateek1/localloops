@@ -30,6 +30,9 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
         const { data, error: signupError } = await client.auth.signUp({
           email: email.trim(),
           password,
+          options: {
+            data: { localloops_app: true },
+          },
         })
         if (signupError) throw signupError
         if (data.session) onClose()
