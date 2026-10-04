@@ -1,4 +1,4 @@
-type VercelRequest = { method?: string; url?: string }
+type VercelRequest = { method?: string; body?: unknown }
 type VercelResponse = {
   setHeader(name: string, value: string): void
   status(code: number): VercelResponse
@@ -20,36 +20,78 @@ const states: Record<string, string> = {
 
 function stateCode(input: string) {
   const normalized = input.trim().toLowerCase()
-  if (/^[a-z]{2}$/i.test(normalized)) return normalized.toUpperCase()
-  return states[normalized] ?? ''
+  const code = /^[a-z]{2}$/i.test(normalized) ? normalized.toUpperCase() : states[normalized] ?? ''
+  return code && Object.values(states).includes(code) ? code : ''
 }
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
-  response.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
-  if (request.method !== 'GET') return response.status(405).json({ error: 'Use GET.' })
+  response.setHeader('Cache-Control', 'private, no-store, max-age=0')
+  response.setHeader('Vary', 'Authorization')
+  if (request.method !== 'POST') return response.status(405).json({ error: 'Use POST.' })
 
-  const url = new URL(request.url ?? '/', 'https://localloops.invalid')
-  const query = (url.searchParams.get('q') ?? '').trim().replace(/\s+/g, ' ')
+  const body = request.body as { query?: unknown } | null
+  const query = typeof body?.query === 'string' ? body.query.trim().replace(/\s+/g, ' ') : ''
   if (query.length < 3 || query.length > 100) {
-    return response.status(400).json({ error: 'Enter a ZIP code or a town and state.' })
+    return response.status(400).json({ error: 'Enter a U.S. street address, ZIP code, or a town and state.' })
   }
 
-  let lookupUrl: string
-  if (/^\d{5}$/.test(query)) {
-    lookupUrl = `https://api.zippopotam.us/us/${query}`
-  } else {
-    const parts = query.split(',')
-    const city = parts.slice(0, -1).join(',').trim()
-    const state = stateCode(parts.at(-1) ?? '')
-    if (!city || !state) {
-      return response.status(400).json({ error: 'For a town search, include its state (for example, “Asheville, NC”).' })
+  const zip = query.match(/^(\d{5})(?:-\d{4})?$/)
+  const parts = query.split(',')
+  const city = parts.length === 2 ? parts[0].trim() : ''
+  const state = parts.length === 2 ? stateCode(parts[1]) : ''
+  const looksLikeCityState = Boolean(city && state && !/(^\d|\b(?:street|st|road|rd|avenue|ave|boulevard|blvd|lane|ln|drive|dr|route|rt|highway|hwy)\b)/i.test(city))
+
+  if (!zip && !looksLikeCityState) {
+    const censusUrl = new URL('https://geocoding.geo.census.gov/geocoder/locations/onelineaddress')
+    censusUrl.searchParams.set('address', query)
+    censusUrl.searchParams.set('benchmark', 'Public_AR_Current')
+    censusUrl.searchParams.set('format', 'json')
+    try {
+      const upstream = await fetch(censusUrl, {
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(8000),
+      })
+      if (!upstream.ok) throw new Error(`Census Geocoder returned ${upstream.status}`)
+      const payload = await upstream.json() as {
+        result?: { addressMatches?: Array<{
+          coordinates?: { x?: number; y?: number }
+          addressComponents?: { city?: string; state?: string; zip?: string }
+        }> }
+      }
+      const match = payload.result?.addressMatches?.[0]
+      const latitude = Number(match?.coordinates?.y)
+      const longitude = Number(match?.coordinates?.x)
+      const matchedCity = match?.addressComponents?.city?.trim() ?? ''
+      const matchedState = match?.addressComponents?.state?.trim() ?? ''
+      const abbreviation = stateCode(matchedState)
+      if (!match || !Number.isFinite(latitude) || !Number.isFinite(longitude) || !abbreviation) {
+        return response.status(404).json({ error: 'No U.S. address matched. Include a street number, street, city, and state.' })
+      }
+      return response.status(200).json({
+        location: {
+          id: `${abbreviation}:${matchedCity.toLowerCase()}`,
+          label: `${matchedCity || 'U.S. location'}, ${abbreviation}`,
+          city: matchedCity || 'U.S. location',
+          state: states[matchedState.toLowerCase()] ? matchedState : abbreviation,
+          stateCode: abbreviation,
+          latitude,
+          longitude,
+          zoom: 12,
+        },
+        approximate: false,
+        source: 'U.S. Census Bureau',
+      })
+    } catch {
+      return response.status(502).json({ error: 'Address search is unavailable right now. Try a ZIP code or town and state.' })
     }
-    lookupUrl = `https://api.zippopotam.us/us/${state.toLowerCase()}/${encodeURIComponent(city)}`
   }
 
+  const lookupUrl = zip
+    ? `https://api.zippopotam.us/us/${zip[1]}`
+    : `https://api.zippopotam.us/us/${state.toLowerCase()}/${encodeURIComponent(city)}`
   try {
-    const upstream = await fetch(lookupUrl, { headers: { Accept: 'application/json' } })
-    if (upstream.status === 404) return response.status(404).json({ error: 'No U.S. place matched that search. Check the ZIP code and state.' })
+    const upstream = await fetch(lookupUrl, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(8000) })
+    if (upstream.status === 404) return response.status(404).json({ error: 'No U.S. place matched that search. Check the ZIP code or town and state.' })
     if (!upstream.ok) throw new Error(`Place lookup returned ${upstream.status}`)
     const payload = await upstream.json() as {
       'post code'?: string
@@ -63,15 +105,15 @@ export default async function handler(request: VercelRequest, response: VercelRe
     if (!place || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
       return response.status(404).json({ error: 'No coordinates were returned for that place.' })
     }
-    const city = place['place name'] ?? ''
-    const state = place.state ?? payload.state ?? place['state abbreviation'] ?? payload['state abbreviation'] ?? ''
+    const cityName = place['place name'] ?? ''
+    const stateName = place.state ?? payload.state ?? place['state abbreviation'] ?? payload['state abbreviation'] ?? ''
     const abbreviation = (place['state abbreviation'] ?? payload['state abbreviation'] ?? '').toUpperCase()
     return response.status(200).json({
       location: {
-        id: `${abbreviation}:${payload['post code'] ?? place['post code'] ?? city.toLowerCase()}`,
-        label: `${city}, ${abbreviation}`,
-        city,
-        state,
+        id: `${abbreviation}:${payload['post code'] ?? place['post code'] ?? cityName.toLowerCase()}`,
+        label: `${cityName}, ${abbreviation}`,
+        city: cityName,
+        state: stateName,
         stateCode: abbreviation,
         latitude,
         longitude,

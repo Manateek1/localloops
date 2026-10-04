@@ -1,8 +1,8 @@
 # LocalLoops
 
-LocalLoops helps people find public events and neighbors in their area, including rural communities where nearby plans may be spread across several towns. The app searches real listings from Ticketmaster and the National Park Service, shows public gatherings created by LocalLoops members, and never fills gaps with sample people or invented events.
+LocalLoops helps people find public events and neighbors in their area, including rural communities where nearby plans may be spread across several towns. It searches live listings from Ticket Fairy and, when their keys are configured, Ticketmaster and the National Park Service. Members can host public gatherings and mark that they are going; LocalLoops never fills gaps with sample people or invented events.
 
-Location search accepts a U.S. ZIP code or a town and state, and uses an approximate postal-place center. Every search covers a 30-mile radius around that center, drawn on the map. The map uses OpenFreeMap tiles based on OpenStreetMap data. Search works in all 50 states; listing coverage depends on the event providers and gatherings members publish.
+Location search accepts a U.S. street address, ZIP code, or town and state. Street addresses are matched by the U.S. Census Geocoder; ZIP and town searches use approximate postal-place centers. The default radius is 20 miles, with options to search farther. Search works across all 50 states, but event coverage depends on provider inventory and member posts. Ticket Fairy's public API returns state-filtered listings, so the app checks up to five pages per state and maps only events inside the chosen radius. The map uses OpenFreeMap tiles based on OpenStreetMap data.
 
 ## Run locally
 
@@ -14,15 +14,16 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The Vite development server also runs the `/api` handlers locally. ZIP and town search works without an API key. Without event-provider keys, LocalLoops shows a clear empty state and does not invent listings. Sign-in, member profiles, community gatherings, RSVPs, ride coordination, connection requests, and member messages need a separately configured LocalLoops Supabase project.
+The Vite development server also runs the `/api/geocode` and `/api/events` handlers locally. Address, ZIP, and town search needs no API key. Ticket Fairy is the no-key live event source; Ticketmaster and National Park Service are optional key-backed sources. Sign-in, member profiles, gatherings, shared attendance, ride coordination, connection requests, and messages need a separately configured LocalLoops Supabase project.
 
 ## Configure Supabase
 
-Create a new project for LocalLoops. Do not point this app at a database used by another product. Copy its project URL and publishable key into `.env.local`:
+Create a dedicated Supabase project for LocalLoops. Do not point this app at a database used by another product. Copy the URL, publishable key, and project ref into `.env.local`. The app checks that the URL's project ref matches the configured ref before it enables accounts, which prevents accidentally connecting LocalLoops to another product's project.
 
 ```dotenv
 VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+VITE_SUPABASE_PROJECT_REF=YOUR_PROJECT_REF
 ```
 
 For immediate email/password signup without verification, turn off **Confirm email** in the project's Supabase Auth email provider settings. Hosted Supabase projects require email confirmation by default; local Supabase uses the checked-in setting `enable_confirmations = false`.
@@ -35,19 +36,20 @@ supabase link --project-ref YOUR_PROJECT_REF
 supabase db push
 ```
 
-The migration enables row-level security on every app table. Profiles are visible only to authenticated members who opted into discovery; Community ranks those opted-in profiles by shared interests. Nearby events are ranked using a member's saved interests and their own past community-event RSVPs. Direct messages require an accepted connection. Members can optionally add a broad town or region and state to be discoverable in that state. LocalLoops stores public pickup-area labels, not home addresses or live member coordinates. Configure the Supabase Auth site URL and allowed redirect URLs for local development and each deployed app origin.
+The migrations enable row-level security on every app table. A member's “I'm going” status is visible to signed-in members; display names follow profile discovery and connection settings. Profiles are visible only to members who opted into discovery, plus accepted connections. Nearby events are ranked using a member's saved interests and their past community-event attendance. Direct messages require an accepted connection. Members can optionally add a broad town or region and state to be discoverable in that state. Search addresses are not saved, and LocalLoops stores public meetup coordinates and place names, not home addresses or live member locations. Configure the Supabase Auth site URL and allowed redirect URLs for local development and each deployed app origin.
 
 ## Connect real event sources
 
-Create API keys in the providers' developer portals and add them only as server environment variables:
+Ticket Fairy's live public event API needs no key. To add the optional Ticketmaster and NPS sources, create their API keys and add them only as server environment variables:
 
 ```dotenv
 TICKETMASTER_API_KEY=...
 NPS_API_KEY=...
 ```
 
-- [Ticketmaster Discovery API](https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/) returns organizer listings around the searched coordinates.
-- [National Park Service API](https://www.nps.gov/subjects/developer/api-documentation.htm) contributes dated NPS events with published coordinates.
+- [Ticket Fairy's public event API](https://www.ticketfairy.com/developers) supplies live public listings without an account or key. Its public listing filters by state and has pagination; LocalLoops fetches at most five pages (up to 1,000 results) from the next 120 days, then filters by distance.
+- [Ticketmaster Discovery API](https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/) can return listings around the searched coordinates when `TICKETMASTER_API_KEY` is set.
+- [National Park Service API](https://www.nps.gov/subjects/developer/api-documentation.htm) contributes dated NPS events when `NPS_API_KEY` is set.
 
 In Vercel, set these as server-side environment variables. Never prefix them with `VITE_`; the browser calls the `/api/events` function and does not receive either key. The map and place search need no key. Each event card names its source and links back to the original listing. Provider coverage is not a complete catalog of every county fair, library program, or small-town event, so LocalLoops also lets signed-in members publish real public gatherings.
 
@@ -76,8 +78,8 @@ Create a Google Cloud API key, enable Cloud Translation API, and set `GOOGLE_TRA
 
 ## Deploy to Vercel
 
-Import this repository into Vercel with the Vite framework preset. Add the Supabase URL and publishable key as `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, then add event-provider and voice keys as server-only variables. Apply the Supabase migration and set Auth redirect URLs before inviting members. Vercel builds the Vite app and deploys the `api/` handlers as serverless functions.
+Import this repository into Vercel with the Vite framework preset. Add the Supabase URL, publishable key, and matching project ref as `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and `VITE_SUPABASE_PROJECT_REF`, then add event-provider and voice keys as server-only variables. Apply the Supabase migrations and set Auth redirect URLs before inviting members. Vercel builds the Vite app and deploys the `api/` handlers as serverless functions.
 
 ## Scope
 
-LocalLoops has email/password sign-in, profiles, opt-in member discovery, connection requests, accepted-connection messages, public community events, event RSVPs, and public-place ride coordination. The large sprout character is Leafy, the voice guide. The guide uses Gemini for spoken questions and answers, and ElevenLabs for speech synthesis; browser speech synthesis provides a fallback.
+LocalLoops has email/password sign-in, profiles, opt-in member discovery, connection requests, accepted-connection messages, public community events, shared “I'm going” attendance, and public-place ride coordination. The large sprout character is Leafy, the voice guide. The guide uses Gemini for spoken questions and answers, and ElevenLabs for speech synthesis; browser speech synthesis provides a fallback.

@@ -1,1 +1,1 @@
-export const EVENT_SEARCH_RADIUS_MILES = 30
+export const EVENT_SEARCH_RADIUS_MILES = 20
