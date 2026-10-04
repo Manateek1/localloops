@@ -10,7 +10,6 @@ type AuthModalProps = {
 
 export function AuthModal({ client, onClose }: AuthModalProps) {
   const [mode, setMode] = useState<'sign-in' | 'create'>('sign-in')
-  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
@@ -31,14 +30,10 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
         const { data, error: signupError } = await client.auth.signUp({
           email: email.trim(),
           password,
-          options: {
-            data: { display_name: name.trim() },
-            emailRedirectTo: window.location.origin,
-          },
         })
         if (signupError) throw signupError
         if (data.session) onClose()
-        else setMessage('Check your email for a confirmation link. Your profile will be ready when you return.')
+        else setError('This Supabase project requires email confirmation. Turn off email confirmations in its Auth settings to let new accounts sign in right away.')
       } else {
         const { error: signinError } = await client.auth.signInWithPassword({ email: email.trim(), password })
         if (signinError) throw signinError
@@ -67,7 +62,6 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
           </div>
 
           <form className="greet-form" onSubmit={submit}>
-            {mode === 'create' && <label>Your name<input autoComplete="name" required maxLength={60} value={name} onChange={(event) => setName(event.target.value)} placeholder="How neighbors will know you" /></label>}
             <label>Email address<span className="greet-input"><Mail size={17} /><input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></span></label>
             <label>Password<span className="greet-input"><LockKeyhole size={17} /><input type="password" autoComplete={mode === 'create' ? 'new-password' : 'current-password'} required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder={mode === 'create' ? 'At least 8 characters' : 'Your password'} /></span></label>
             {error && <p className="greet-form-message is-error" role="alert">{error}</p>}

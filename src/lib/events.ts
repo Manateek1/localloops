@@ -2,6 +2,7 @@ import type { CommunityEvent, EventSource, LocationResult } from '../data/models
 import type { EventRow, ProfileRow } from './supabase/database.types'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './supabase/database.types'
+import { EVENT_SEARCH_RADIUS_MILES } from '../data/constants'
 
 export type EventFeedState = {
   ticketmaster: 'ready' | 'not_configured' | 'unavailable'
@@ -13,12 +14,12 @@ export type EventFeed = { events: CommunityEvent[]; sources: EventFeedState; err
 
 const emptySources: EventFeedState = { ticketmaster: 'not_configured', nps: 'not_configured', ticketfairy: 'not_configured' }
 
-export async function getSourcedEvents(location: LocationResult, radius: number): Promise<EventFeed> {
+export async function getSourcedEvents(location: LocationResult): Promise<EventFeed> {
   try {
     const params = new URLSearchParams({
       lat: String(location.latitude),
       lon: String(location.longitude),
-      radius: String(radius),
+      radius: String(EVENT_SEARCH_RADIUS_MILES),
       state: location.stateCode,
     })
     const response = await fetch(`/api/events?${params}`)
@@ -50,9 +51,9 @@ const milesBetween = (lat1: number, lon1: number, lat2: number, lon2: number) =>
 export async function getCommunityEvents(
   client: SupabaseClient<Database> | null,
   location: LocationResult,
-  radius: number,
 ): Promise<CommunityEvent[]> {
   if (!client) return []
+  const radius = EVENT_SEARCH_RADIUS_MILES
   const until = new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString()
   const latDelta = radius / 69
   const longitudeDelta = Math.min(180, radius / (69 * Math.max(0.1, Math.cos(location.latitude * Math.PI / 180))))
@@ -115,8 +116,68 @@ export async function getCommunityEvents(
   }))
 }
 
-export function sortNearby(events: CommunityEvent[]) {
+export async function getUserEventHistoryCategories(
+  client: SupabaseClient<Database> | null,
+  userId: string | null,
+): Promise<string[]> {
+  if (!client || !userId) return []
+
+  const { data: rsvps, error: rsvpError } = await client
+    .from('event_rsvps')
+    .select('event_id,created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(100)
+  if (rsvpError || !rsvps?.length) return []
+
+  const eventIds = [...new Set(rsvps.map((rsvp) => rsvp.event_id))]
+  const { data: events, error: eventError } = await client
+    .from('events')
+    .select('category')
+    .in('id', eventIds)
+  if (eventError || !events) return []
+
+  return [...new Set(events
+    .map((event) => event.category.trim())
+    .filter((category) => category && category.toLowerCase() !== 'community'))]
+}
+
+const normalizeForSearch = (value: string) => value
+  .normalize('NFKD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, ' ')
+  .trim()
+
+const interestTerms: Record<string, string[]> = {
+  hiking: ['hiking', 'hike', 'trail', 'trails', 'nature', 'outdoor', 'outdoors', 'camping', 'camp'],
+  'outdoor skills': ['hiking', 'hike', 'trail', 'nature', 'outdoor', 'outdoors', 'camping', 'wilderness', 'survival', 'kayak', 'fishing', 'climbing'],
+  'local food': ['food', 'farm', 'farmers market', 'market', 'culinary', 'cooking', 'tasting', 'food truck'],
+  'arts culture': ['art', 'arts', 'museum', 'theater', 'theatre', 'gallery', 'exhibit', 'culture', 'craft', 'history'],
+  'live music': ['music', 'concert', 'band', 'jazz', 'folk', 'bluegrass', 'orchestra', 'live music'],
+  wellness: ['wellness', 'yoga', 'meditation', 'fitness', 'health', 'exercise', 'run', 'running'],
+  gardening: ['garden', 'gardening', 'plant', 'plants', 'flower', 'flowers', 'seed', 'horticulture'],
+  books: ['book', 'books', 'reading', 'read', 'author', 'library', 'literary', 'story'],
+  photography: ['photography', 'photograph', 'photographer', 'photo', 'camera'],
+  volunteering: ['volunteer', 'volunteering', 'cleanup', 'clean up', 'service', 'food bank'],
+}
+
+function eventRelevance(event: CommunityEvent, interests: string[]) {
+  const searchable = ` ${normalizeForSearch(`${event.title} ${event.category} ${event.description}`)} `
+  const matched = new Set<string>()
+  for (const interest of interests) {
+    const normalizedInterest = normalizeForSearch(interest)
+    if (!normalizedInterest) continue
+    const terms = interestTerms[normalizedInterest] ?? [interest]
+    if (terms.some((term) => searchable.includes(` ${normalizeForSearch(term)} `))) matched.add(normalizedInterest)
+  }
+  return matched.size
+}
+
+export function sortNearby(events: CommunityEvent[], interests: string[] = []) {
   return [...events].sort((a, b) => {
+    const relevance = eventRelevance(b, interests) - eventRelevance(a, interests)
+    if (relevance) return relevance
     const timeA = a.startsAt ? Date.parse(a.startsAt) : Number.MAX_SAFE_INTEGER
     const timeB = b.startsAt ? Date.parse(b.startsAt) : Number.MAX_SAFE_INTEGER
     return timeA - timeB || (a.distanceMiles ?? 0) - (b.distanceMiles ?? 0)
