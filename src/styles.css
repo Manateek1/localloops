@@ -462,7 +462,7 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
   .greet-guide-card img { width: 39%; right: 3%; bottom: -8px; }
   .greet-guide-card__sparkle { right: 5%; top: 22px; font-size: 23px; }
   .greet-privacy-note { align-items: flex-start; font-size: 9px; }
-  .greet-bottom-nav { position: fixed; z-index: 30; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(4,1fr); min-height: 64px; padding: 5px 9px max(5px, env(safe-area-inset-bottom)); border-top: 1px solid rgba(225,224,216,.94); background: rgba(255,254,250,.97); box-shadow: 0 -5px 18px rgba(35,53,40,.05); backdrop-filter: blur(12px); }
+  .greet-bottom-nav { position: fixed; z-index: 30; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); min-height: 64px; padding: 5px 9px max(5px, env(safe-area-inset-bottom)); border-top: 1px solid rgba(225,224,216,.94); background: rgba(255,254,250,.97); box-shadow: 0 -5px 18px rgba(35,53,40,.05); backdrop-filter: blur(12px); }
   .greet-bottom-nav__item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 0; border-radius: 10px; color: #728076; background: transparent; font-size: 8px; cursor: pointer; }
   .greet-bottom-nav__item.is-active { color: var(--forest); font-weight: 750; }
   .greet-app-shell { padding-bottom: 70px; }
@@ -613,4 +613,29 @@ h1, h2, h3 { font-family: "Manrope", "Avenir Next", Avenir, sans-serif; letter-s
   .greet-ride-row { grid-template-columns: 68px minmax(0,1fr); }
   .greet-ride-row small { grid-column: 2; }
   .greet-event-facts { grid-template-columns: 1fr; }
+}
+
+.greet-home-hero--single { grid-template-columns: minmax(0, 1fr); }
+.greet-home-hero--single .greet-home-hero__intro { max-width: 720px; }
+.greet-home-hero__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 19px; }
+.greet-agent-page { max-width: 1040px; }
+.greet-agent-page .greet-page-heading .greet-eyebrow { display: inline-flex; align-items: center; gap: 6px; }
+.greet-agent-voice { margin-bottom: 20px; }
+.greet-agent-voice .greet-guide-card { min-height: 330px; }
+.greet-agent-voice .greet-guide-card h2 { font-size: clamp(28px, 3.4vw, 40px); }
+.greet-agent-events { padding: 22px; border: 1px solid var(--border); border-radius: 22px; background: rgba(255, 254, 250, .86); box-shadow: 0 10px 30px rgba(39,55,43,.035); }
+.greet-agent-events__heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 15px; }
+.greet-agent-events__heading .greet-eyebrow { margin-bottom: 5px; font-size: 9px; }
+.greet-agent-events__heading h2 { margin: 0 0 4px; color: #21362a; font-size: 23px; }
+.greet-agent-events__heading p:last-child { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.greet-agent-event-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.greet-agent-events__note { margin: 0 0 12px; color: #788179; font-size: 10px; line-height: 1.5; }
+
+@media (max-width: 780px) {
+  .greet-home-hero__actions { margin-top: 14px; }
+  .greet-agent-voice .greet-guide-card { min-height: 270px; }
+  .greet-agent-events { padding: 14px; border-radius: 18px; }
+  .greet-agent-events__heading { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .greet-agent-events__heading h2 { font-size: 20px; }
+  .greet-agent-event-grid { grid-template-columns: 1fr; }
 }

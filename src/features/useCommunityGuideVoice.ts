@@ -168,7 +168,7 @@ export function useCommunityGuideVoice({ events, location, language }: {
       conversationRef.current = conversationRef.current.slice(-MAX_HISTORY_TURNS)
 
       const voiceName = result.voiceProvider === 'elevenlabs' ? 'ElevenLabs' : 'your browser’s voice'
-      await speakReply(result.reply, result.audioBase64, `Leafy is answering with ${voiceName}. Tap the button to interrupt.`)
+      await speakReply(result.reply, result.audioBase64, `Sprout is answering with ${voiceName}. Tap the button to interrupt.`)
     } catch (error) {
       setVoiceState('error')
       setStatusText(error instanceof Error ? error.message : 'The guide could not answer just now. Please try again.')

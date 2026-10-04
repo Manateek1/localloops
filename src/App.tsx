@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { BottomNav, Header, type Page } from './components/Navigation'
 import { AccountPage } from './features/AccountPage'
+import { AgentPage } from './features/AgentPage'
 import { AuthModal } from './features/AuthModal'
 import { CommunityPage } from './features/CommunityPage'
 import { CreateEventModal } from './features/CreateEventModal'
@@ -480,6 +481,7 @@ function App() {
           onSearch={submitLocation}
           onRadiusChange={setRadius}
           onOpenEvent={openEvent}
+          onOpenAgent={() => setPage('agent')}
           onCreateEvent={openEventComposer}
           canCreateEvent={Boolean(user)}
           onSignIn={openSignIn}
@@ -517,6 +519,16 @@ function App() {
           onOpenEvent={openEvent}
           onSignIn={openSignIn}
         />}
+        {page === 'agent' && (
+          <AgentPage
+            events={events}
+            errors={feedErrors}
+            loading={feedLoading}
+            location={location}
+            onOpenEvent={openEvent}
+            onOpenExplore={() => setPage('explore')}
+          />
+        )}
         {page === 'inbox' && <InboxPage
           userId={user?.id ?? null}
           friendships={friendships}
