@@ -70,7 +70,7 @@ export function ExplorePage({
           <h1>{location ? 'Real plans around ' + location.label + '.' : 'Find a good plan, wherever home is.'}</h1>
           <p className="greet-home-hero__intro">Search a U.S. street address, town, or ZIP to find public events and local gatherings nearby.</p>
           <div className="greet-home-hero__actions">
-            <button className="greet-button greet-button--primary" type="button" onClick={canCreateEvent ? onCreateEvent : onSignIn}><Plus size={17} />Host a gathering</button>
+            <button className="greet-button greet-button--primary" type="button" onClick={() => canCreateEvent ? onCreateEvent() : onSignIn()}><Plus size={17} />Host a gathering</button>
             <button className="greet-button greet-button--outline" type="button" onClick={onOpenAgent}><AudioLines size={17} />Talk to Sprout</button>
           </div>
         </div>
