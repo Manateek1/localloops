@@ -1,7 +1,10 @@
 -- Initial LocalLoops product data model. External listings are fetched from their named sources.
 -- Every table is protected by RLS; authenticated grants are paired with narrow policies.
 
-create table public.localloops_profiles (
+create schema if not exists localloops;
+grant usage on schema localloops to anon, authenticated, service_role;
+
+create table localloops.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   display_name text not null check (char_length(display_name) between 1 and 60),
   avatar_url text,
@@ -13,9 +16,9 @@ create table public.localloops_profiles (
   created_at timestamptz not null default now()
 );
 
-comment on column public.localloops_profiles.home_region is
+comment on column localloops.profiles.home_region is
   'Broad town or region label only. Never store a home address or precise member location.';
-comment on column public.localloops_profiles.state_code is
+comment on column localloops.profiles.state_code is
   'Optional U.S. state filter for local discovery. No member coordinates or exact address are stored.';
 
 create table public.localloops_events (
@@ -131,7 +134,7 @@ create index localloops_messages_friendship_created_idx on public.localloops_mes
 create index localloops_ride_posts_event_created_idx on public.localloops_ride_posts (event_id, created_at desc);
 create index localloops_notifications_recipient_created_idx on public.localloops_notifications (recipient_id, created_at desc);
 
-alter table public.localloops_profiles enable row level security;
+alter table localloops.profiles enable row level security;
 alter table public.localloops_events enable row level security;
 alter table public.localloops_event_rsvps enable row level security;
 alter table public.localloops_external_event_rsvps enable row level security;
@@ -143,7 +146,7 @@ alter table public.localloops_notifications enable row level security;
 
 -- Start with no role access, then grant only authenticated operations backed by policies below.
 revoke all on table
-  public.localloops_profiles,
+  localloops.profiles,
   public.localloops_events,
   public.localloops_event_rsvps,
   public.localloops_external_event_rsvps,
@@ -154,10 +157,10 @@ revoke all on table
   public.localloops_notifications
 from public, anon, authenticated, service_role;
 
-grant select on public.localloops_profiles to authenticated;
-grant insert (id, display_name) on public.localloops_profiles to authenticated;
+grant select on localloops.profiles to authenticated;
+grant insert (id, display_name) on localloops.profiles to authenticated;
 grant insert (id, display_name, avatar_url, bio, home_region, state_code, interests, discoverable)
-  on public.localloops_profiles to authenticated;
+  on localloops.profiles to authenticated;
 grant select on public.localloops_events to authenticated;
 grant insert (host_id, title, description, starts_at, ends_at, mode, visibility, category, region_label, venue_label, state_code, latitude, longitude, source_name, source_url)
   on public.localloops_events to authenticated;
@@ -172,7 +175,7 @@ grant select, insert, delete on public.localloops_external_ride_posts to authent
 grant select on public.localloops_notifications to authenticated;
 
 grant update (display_name, avatar_url, bio, home_region, state_code, interests, discoverable)
-  on public.localloops_profiles to authenticated;
+  on localloops.profiles to authenticated;
 grant update (title, description, starts_at, ends_at, mode, visibility, category, region_label, venue_label, state_code, latitude, longitude, source_name, source_url)
   on public.localloops_events to authenticated;
 grant update (status) on public.localloops_event_rsvps to authenticated;
@@ -190,11 +193,11 @@ grant insert (event_source, source_event_id, user_id, kind, pickup_area, seats_a
 grant update (read_at) on public.localloops_notifications to authenticated;
 
 create policy "Discoverable localloops_profiles are visible to signed-in members"
-  on public.localloops_profiles for select to authenticated
+  on localloops.profiles for select to authenticated
   using (discoverable or (select auth.uid()) = id);
 
 create policy "Accepted connections can see one another's localloops_profiles"
-  on public.localloops_profiles for select to authenticated
+  on localloops.profiles for select to authenticated
   using (exists (
     select 1 from public.localloops_friendships f
     where f.status = 'accepted'
@@ -203,11 +206,11 @@ create policy "Accepted connections can see one another's localloops_profiles"
   ));
 
 create policy "Members create their own profile"
-  on public.localloops_profiles for insert to authenticated
+  on localloops.profiles for insert to authenticated
   with check ((select auth.uid()) = id);
 
 create policy "Members update their own profile"
-  on public.localloops_profiles for update to authenticated
+  on localloops.profiles for update to authenticated
   using ((select auth.uid()) = id)
   with check ((select auth.uid()) = id);
 
@@ -397,7 +400,7 @@ begin
     v_display_name := left(coalesce(nullif(split_part(coalesce(auth.jwt() ->> 'email', 'Neighbor'), '@', 1), ''), 'Neighbor'), 60);
   end if;
 
-  insert into public.localloops_profiles (id, display_name)
+  insert into localloops.profiles (id, display_name)
   values (
     v_user_id,
     v_display_name

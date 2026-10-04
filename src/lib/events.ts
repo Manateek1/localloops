@@ -105,7 +105,7 @@ export async function getCommunityEvents(
   const hostIds = [...new Set(nearby.map((event) => event.host_id))]
   const hostNames = new Map<string, string>()
   if (hostIds.length) {
-    const { data: profiles } = await client.from('localloops_profiles').select('id, display_name').in('id', hostIds)
+    const { data: profiles } = await client.schema('localloops').from('profiles').select('id, display_name').in('id', hostIds)
     for (const profile of (profiles ?? []) as Pick<ProfileRow, 'id' | 'display_name'>[]) {
       hostNames.set(profile.id, profile.display_name)
     }

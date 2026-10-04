@@ -8,7 +8,7 @@ VALUES
   ('62222222-2222-4222-8222-222222222222', 'authenticated', 'authenticated', 'social-b@example.test', '', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
   ('63333333-3333-4333-8333-333333333333', 'authenticated', 'authenticated', 'social-outsider@example.test', '', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now());
 
-INSERT INTO public.localloops_profiles (id, display_name, discoverable)
+INSERT INTO localloops.profiles (id, display_name, discoverable)
 VALUES
   ('61111111-1111-4111-8111-111111111111', 'Social A', false),
   ('62222222-2222-4222-8222-222222222222', 'Social B', true),
@@ -61,17 +61,17 @@ SELECT is(
 );
 
 SET LOCAL request.jwt.claim.sub = '62222222-2222-4222-8222-222222222222';
-UPDATE public.localloops_profiles SET discoverable = false
+UPDATE localloops.profiles SET discoverable = false
 WHERE id = '62222222-2222-4222-8222-222222222222';
 SELECT is(
-  (SELECT discoverable FROM public.localloops_profiles
+  (SELECT discoverable FROM localloops.profiles
    WHERE id = '62222222-2222-4222-8222-222222222222'),
   false,
   'a member can hide their profile from public discovery'
 );
 SET LOCAL request.jwt.claim.sub = '61111111-1111-4111-8111-111111111111';
 SELECT is(
-  (SELECT count(*)::integer FROM public.localloops_profiles
+  (SELECT count(*)::integer FROM localloops.profiles
    WHERE id = '62222222-2222-4222-8222-222222222222'),
   1,
   'accepted friends can still see a profile after public discovery is turned off'

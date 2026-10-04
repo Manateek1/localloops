@@ -20,11 +20,11 @@ create index if not exists localloops_ride_posts_user_id_idx
 
 -- Combine the two authorized-read rules into one policy to avoid overlapping permissive policies.
 drop policy if exists "Discoverable localloops_profiles are visible to signed-in members"
-  on public.localloops_profiles;
+  on localloops.profiles;
 drop policy if exists "Accepted connections can see one another's localloops_profiles"
-  on public.localloops_profiles;
+  on localloops.profiles;
 create policy "Members can read profiles they are allowed to see"
-  on public.localloops_profiles for select to authenticated
+  on localloops.profiles for select to authenticated
   using (
     discoverable
     or (select auth.uid()) = id

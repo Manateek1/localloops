@@ -140,7 +140,7 @@ export function CommunityPage({ client, profiles, friendships, previewRequestPro
         setCommunityEvents(rows)
         const hostIds = [...new Set(rows.map((event) => event.host_id))]
         if (!hostIds.length) return
-        const { data: hostProfiles } = await client.from('localloops_profiles').select('id, display_name').in('id', hostIds)
+        const { data: hostProfiles } = await client.schema('localloops').from('profiles').select('id, display_name').in('id', hostIds)
         if (active) {
           setCommunityEventHosts(Object.fromEntries(((hostProfiles ?? []) as Pick<ProfileRow, 'id' | 'display_name'>[]).map((host) => [host.id, host.display_name])))
         }

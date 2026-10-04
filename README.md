@@ -37,3 +37,12 @@ cp .env.example .env.local
 
 # 3. Start local development server
 npm run dev
+```
+
+## Shared Supabase project
+
+LARP Chat AI and LocalLoops use one Supabase project and one shared Auth
+identity table (`auth.users`). Their app profiles are stored separately:
+`larpchatai.profiles` for LARP Chat AI and `localloops.profiles` for LocalLoops.
+The migrations in `supabase/migrations` move existing profile rows without
+changing their user IDs and keep compatibility views for older deployments.
