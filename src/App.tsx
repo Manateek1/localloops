@@ -440,6 +440,7 @@ function App() {
           sources={feedSources}
           errors={feedErrors}
           locationError={locationError}
+          communityAvailable={Boolean(supabaseClient)}
           query={locationQuery}
           radius={radius}
           onQueryChange={(value) => { setLocationQuery(value); setLocationError('') }}

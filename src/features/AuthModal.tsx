@@ -10,7 +10,6 @@ type AuthModalProps = {
 
 export function AuthModal({ client, onClose }: AuthModalProps) {
   const [mode, setMode] = useState<'sign-in' | 'create'>('sign-in')
-  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
@@ -32,7 +31,7 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
           email: email.trim(),
           password,
           options: {
-            data: { localloops_app: true, localloops_display_name: name.trim() },
+            data: { localloops_app: true },
           },
         })
         if (signupError) throw signupError
@@ -66,7 +65,6 @@ export function AuthModal({ client, onClose }: AuthModalProps) {
           </div>
 
           <form className="greet-form" onSubmit={submit}>
-            {mode === 'create' && <label>Your name<input autoComplete="name" required maxLength={60} value={name} onChange={(event) => setName(event.target.value)} placeholder="How neighbors will know you" /></label>}
             <label>Email address<span className="greet-input"><Mail size={17} /><input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></span></label>
             <label>Password<span className="greet-input"><LockKeyhole size={17} /><input type="password" autoComplete={mode === 'create' ? 'new-password' : 'current-password'} required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder={mode === 'create' ? 'At least 8 characters' : 'Your password'} /></span></label>
             {error && <p className="greet-form-message is-error" role="alert">{error}</p>}

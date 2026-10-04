@@ -1,5 +1,5 @@
 import { Suspense, lazy, useMemo, useState, type FormEvent } from 'react'
-import { CalendarDays, Compass, List, Map, MapPin, MessageCircle, Plus, Search, Trees } from 'lucide-react'
+import { CalendarDays, Compass, List, Map, MapPin, Plus, Search, Trees } from 'lucide-react'
 import type { CommunityEvent, LocationResult } from '../data/models'
 import type { EventFeedState } from '../lib/events'
 import { EventCard } from '../components/EventCard'
@@ -14,6 +14,7 @@ type ExplorePageProps = {
   sources: EventFeedState
   errors: string[]
   locationError: string
+  communityAvailable: boolean
   query: string
   radius: number
   onQueryChange: (query: string) => void
@@ -28,7 +29,7 @@ type ExplorePageProps = {
 const filters = ['All events', 'Outdoors', 'Arts & culture', 'Music', 'Free', 'Community']
 
 export function ExplorePage({
-  location, events, loading, sources, errors, locationError, query, radius, onQueryChange, onSearch,
+  location, events, loading, sources, errors, locationError, communityAvailable, query, radius, onQueryChange, onSearch,
   onRadiusChange, onOpenEvent, onCreateEvent, canCreateEvent, onSignIn,
 }: ExplorePageProps) {
   const [view, setView] = useState<'map' | 'list'>('map')
@@ -55,12 +56,7 @@ export function ExplorePage({
     }
   }
 
-  const unavailableSources = [
-    sources.ticketfairy === 'not_configured' ? 'Ticket Fairy' : '',
-    sources.ticketmaster === 'not_configured' ? 'Ticketmaster' : '',
-    sources.nps === 'not_configured' ? 'National Park Service' : '',
-    sources.community === 'not_configured' ? 'the LocalLoops database' : '',
-  ].filter(Boolean)
+  const unavailableSources = [sources.ticketmaster === 'not_configured' ? 'Ticketmaster' : '', sources.nps === 'not_configured' ? 'National Park Service' : ''].filter(Boolean)
 
   return (
     <div className="greet-page greet-explore-page">
@@ -71,7 +67,7 @@ export function ExplorePage({
           <p className="greet-home-hero__intro">Discover real public events and local gatherings across all 50 states.</p>
           <button className="greet-button greet-button--primary" type="button" onClick={canCreateEvent ? onCreateEvent : onSignIn}><Plus size={17} />Host a gathering</button>
         </div>
-        <GuideChatPreview />
+        <VoiceGuide events={events} location={location} />
       </section>
 
       <section className="greet-search-panel" aria-label="Find events near a location">
@@ -105,13 +101,11 @@ export function ExplorePage({
             <div className="greet-map-column">
               <Suspense fallback={<div className="greet-map greet-map--loading" role="status">Loading the live map…</div>}><MapCanvas location={location} events={filteredEvents} onOpenEvent={(id) => { const event = filteredEvents.find((item) => item.id === id); if (event) onOpenEvent(event) }} /></Suspense>
               <div className="greet-source-strip">
-                <span className="greet-source-strip__label">Event sources</span>
+                <span className="greet-source-strip__label">Live sources</span>
                 {sources.ticketfairy === 'ready' && <span><CalendarDays size={14} />Ticket Fairy</span>}
                 {sources.ticketmaster === 'ready' && <span><CalendarDays size={14} />Ticketmaster</span>}
                 {sources.nps === 'ready' && <span><Trees size={14} />National Park Service</span>}
-                {sources.community === 'ready' && <span><UsersIcon />LocalLoops gatherings</span>}
-                {sources.community === 'not_configured' && <span className="greet-source-strip__unavailable">LocalLoops database not connected</span>}
-                {sources.community === 'unavailable' && <span className="greet-source-strip__unavailable">LocalLoops database unavailable</span>}
+                {communityAvailable && <span><UsersIcon />LocalLoops gatherings</span>}
               </div>
             </div>
             <div className="greet-event-list-column">
@@ -126,34 +120,8 @@ export function ExplorePage({
         )}
       </section>
 
-      <VoiceGuide signedIn={canCreateEvent} onSignIn={onSignIn} />
       <p className="greet-privacy-note"><MapPin size={14} />Location searches use town or ZIP centers. LocalLoops does not save your precise location.</p>
     </div>
-  )
-}
-
-function GuideChatPreview() {
-  return (
-    <aside className="greet-guide-preview" aria-label="Sample conversation with the LocalLoops guide">
-      <div className="greet-guide-preview__header">
-        <div>
-          <span className="greet-guide-preview__eyebrow"><MessageCircle size={13} />Sample conversation</span>
-          <strong>Meet your LocalLoops guide</strong>
-        </div>
-        <span className="greet-guide-preview__badge">Example</span>
-      </div>
-      <div className="greet-guide-preview__body">
-        <div className="greet-guide-preview__thread" role="group" aria-label="Illustrative chat messages">
-          <p className="greet-guide-preview__user">I’m outside town. What’s nearby this weekend?</p>
-          <div className="greet-guide-preview__reply">
-            <span>LocalLoops guide</span>
-            <p>Search a town or ZIP to find real public events and neighbor-hosted gatherings nearby.</p>
-          </div>
-        </div>
-        <img src="/images/localloops-sprout.png" alt="The friendly LocalLoops guide character" />
-      </div>
-      <p className="greet-guide-preview__footnote">An example of how your local guide can help.</p>
-    </aside>
   )
 }
 
